@@ -495,7 +495,7 @@ window.DECO={"templates": {"AAM": {"name": "Air & Space Achievement Medal", "ope
 </script>
 <script>
 /* ============ measurement engine (verified, Adobe-matched) ============ */
-var WIDTHS={" ":250,"!":333,"\"":408,"#":500,"$":500,"%":833,"&":778,"'":180,"(":333,")":333,"*":500,"+":564,",":250,"-":333,".":250,"/":278,"0":500,"1":500,"2":500,"3":500,"4":500,"5":500,"6":500,"7":500,"8":500,"9":500,":":278,";":278,"<":564,"=":564,">":564,"?":444,"@":921,"A":722,"B":667,"C":667,"D":722,"E":611,"F":556,"G":722,"H":722,"I":333,"J":389,"K":722,"L":611,"M":889,"N":722,"O":722,"P":556,"Q":722,"R":667,"S":556,"T":611,"U":722,"V":722,"W":944,"X":722,"Y":722,"Z":611,"[":333,"\\":278,"]":333,"^":469,"_":500,"`":333,"a":444,"b":500,"c":444,"d":500,"e":444,"f":333,"g":500,"h":500,"i":278,"j":278,"k":500,"l":278,"m":778,"n":500,"o":500,"p":500,"q":500,"r":333,"s":389,"t":278,"u":500,"v":500,"w":722,"x":500,"y":500,"z":444,"{":480,"|":200,"}":480,"~":541,"\u2019":333,"\u2018":333,"\u201c":444,"\u201d":444,"\u2013":500,"\u2014":1000,"\u00a0":250};
+var WIDTHS={" ":250,"!":333,"\"":408,"#":500,"$":500,"%":833,"&":778,"'":180,"(":333,")":333,"*":500,"+":564,",":250,"-":333,".":250,"/":278,"0":500,"1":500,"2":500,"3":500,"4":500,"5":500,"6":500,"7":500,"8":500,"9":500,":":278,";":278,"<":564,"=":564,">":564,"?":444,"@":921,"A":722,"B":667,"C":667,"D":722,"E":611,"F":556,"G":722,"H":722,"I":333,"J":389,"K":722,"L":611,"M":889,"N":722,"O":722,"P":556,"Q":722,"R":667,"S":556,"T":611,"U":722,"V":722,"W":944,"X":722,"Y":722,"Z":611,"[":333,"\\":278,"]":333,"^":469,"_":500,"`":333,"a":444,"b":500,"c":444,"d":500,"e":444,"f":333,"g":500,"h":500,"i":278,"j":278,"k":500,"l":278,"m":778,"n":500,"o":500,"p":500,"q":500,"r":333,"s":389,"t":278,"u":500,"v":500,"w":722,"x":500,"y":500,"z":444,"{":480,"|":200,"}":480,"~":541,"\u2019":333,"\u2018":333,"\u201c":444,"\u201d":444,"\u2013":500,"\u2014":1000,"\u00a0":250,"\u2000":500,"\u2001":1000,"\u2002":500,"\u2003":1000,"\u2004":333,"\u2005":250,"\u2006":167,"\u2007":500,"\u2008":250,"\u2009":200,"\u200a":100,"\u200b":0,"\u202f":200,"\u205f":222,"\u3000":1000,"\u2011":333,"\u2212":564};
 function charW(c){ var w=WIDTHS[c]; return (w===undefined)?500:w; }
 function $(id){ return document.getElementById(id); }
 function getW(){ return parseFloat($("pW").value)||202.321; }
@@ -509,7 +509,7 @@ function wrap(text){
   var maxW=effWidthPt(); var lines=[];
   var paras=text.replace(/\r/g,"").split("\n");
   for(var p=0;p<paras.length;p++){
-    var words=paras[p].split(/( +)/); var cur="";
+    var words=paras[p].split(/([ \u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]+)/); var cur="";
     for(var i=0;i<words.length;i++){
       var tok=words[i];
       if(textW(cur+tok)<=maxW || cur===""){ cur=cur+tok; }
@@ -538,7 +538,7 @@ function splitBullets(raw){
     else { if(cur===null) cur="- "+s; else cur+=" "+s; }
   }
   if(cur!==null) chunks.push(cur);
-  return chunks.map(function(c){return c.replace(/^[-\u2022*]\s+/,"").replace(/\s+/g," ").trim();}).filter(Boolean);
+  return chunks.map(function(c){return c.replace(/^[-\u2022*][ \t]*/,"- ").replace(/[ \t\r\n]+/g," ").trim();}).filter(Boolean);
 }
 
 /* ============ acronyms ============ */
@@ -2172,8 +2172,13 @@ function renderReference(){
 load(); applySettings(); renderAll(); initEx(); applyTheme((state.ui&&state.ui.theme)||"dark"); setMode((state.ui&&state.ui.mode)||'1206'); try{if(state.ui&&state.ui.tab)setTab(state.ui.tab);}catch(e){} growAll(); initUI(); updateSaveChip(); initShortcuts();
 
 /* ===== Version tracker ===== */
-var APP_VERSION="9.16";
+var APP_VERSION="9.17";
 var CHANGELOG=[
+  {v:"9.17", d:"11 Jul 2026", notes:[
+     "MAJOR 1206 accuracy fix. Real 1206 packages use narrow Unicode spaces (U+2006 six-per-em) to compress a bullet onto the line. The width table had no entry for them, so each was measured as a half-em (6pt instead of its true 2pt). On a real bullet with 37 of them that added ~148 points of phantom width \u2014 about a quarter of a line \u2014 which is why statements that genuinely fit the form were flagged as too long. Added correct metrics for every Unicode space: a real 4Q25 bullet now measures 1.93 lines (fits) instead of 2.19 (false fail).",
+     "Line wrapping now breaks on every space type, not just the regular space. Previously a thin-space bullet was one unbreakable word and got chopped mid-word.",
+     "Pasted packages now KEEP the leading dash (- ) on each statement and no longer collapse narrow spaces into regular ones (which silently widened the text). The per-statement Copy button now copies a paste-ready line with dash and spacing intact."
+  ]},
   {v:"9.16", d:"11 Jul 2026", notes:[
      "The top scoreboard (Grade, Differentiator, Fit 2-line, Unique Verbs, Recognition, Avg Numbers, Passive) is 1206-specific, so it now only appears on the 1206 page. On the Evaluation and Decoration pages it is hidden \u2014 reclaiming the top half of the phone screen and removing metrics that did not apply there."
   ]},
