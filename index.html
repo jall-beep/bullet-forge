@@ -1176,7 +1176,7 @@ renderScore=function(){ _rs();
   var rr=recReach(bs);
   $("score").insertAdjacentHTML("afterbegin",
     '<div class="kpi" title="Evidence-based grade (VALUATION_ALGORITHM_DATABASE): ELITE 85 / STRONG 70 / COMPETITIVE 55 / MODERATE 40"><b style="color:'+bd[1]+'">'+g.score+'</b><span>grade /100</span></div>'+
-    '<div class="kpi" title="Board read: each statement scored 1-10 the way a board member does, averaged, rounded to .5 (raw '+bavg.toFixed(2)+'). 7.5 = did the job with data; 8 = changed something; 8.5+ = reach, recognition, or enterprise-first. See Rules tab."><b style="color:'+(bround>=8.5?'var(--good)':(bround>=8?'var(--acc)':'var(--warn)'))+'">'+(brs.length?bround.toFixed(1):'\u2013')+'</b><span>board read /10</span></div>'+
+    '<div class="kpi" title="Board read: each statement scored 1-10 the way a reviewer does, averaged, rounded to .5 (raw '+bavg.toFixed(2)+'). 7.5 = did the job with data; 8 = changed something; 8.5+ = reach, recognition, or enterprise-first. See Rules tab."><b style="color:'+(bround>=8.5?'var(--good)':(bround>=8?'var(--acc)':'var(--warn)'))+'">'+(brs.length?bround.toFixed(1):'\u2013')+'</b><span>board read /10</span></div>'+
     '<div class="kpi" title="Recognition reach: highest echelon that conferred recognition anywhere in the package (Sq / Group / Wing / MAJCOM / AF). Records that stop at Group are the most common gap reviewers flag."><b style="color:'+(rr.tier>=3?'var(--good)':(rr.tier>=2?'var(--acc)':'var(--warn)'))+'">'+escHtml(rr.label)+'</b><span>rec reach</span></div>'+
     '<div class="kpi" title="Statements scoring ELITE (85+) and STRONG (70+)"><b style="color:'+(elite?'var(--good)':'var(--ink)')+'">'+elite+'\u00b7'+strong+'</b><span>elite\u00b7strong</span></div>'+
     '<div class="kpi" title="Package contains an earned-award or first-of-kind discriminator - boards look for at least one"><b style="color:'+(diff?'var(--good)':'var(--warn)')+'">'+(diff?'\u2713':'\u2717')+'</b><span>differentiator</span></div>');
@@ -1222,8 +1222,8 @@ function coachInsert(id,kind){
   b.text=tx; save(); renderAll();
   flashToast("Starter inserted \u2014 replace the [bracketed] part.");
 }
-/* ===== v9.24: reviewer lens — how a 374 MDG board member actually reads a statement.
-   Built from board-member margin notes on scored 1206s and the CY26 MSgt strat-board record reviews. ===== */
+/* ===== v9.24: reviewer lens — a neutral model of how a reviewer reads a statement when packages are scored
+   and how leaders weigh a record at stratification. Not tied to any specific board, cycle, or people. ===== */
 var RL_RANK=/#\s?\d|\b#1\b|\b\d+\s?(?:of|\/)\s?\d+\b|\b(?:first|1st|sole|only|best|top)\b\s+(?:of|in|among|to|\d|performer|rated)|\btop\s?\d/i;
 function reviewLens(t){
   var s=(t||"").replace(/^[\s\-•*]+/,"").trim(); if(!s)return null;
@@ -1290,7 +1290,7 @@ function recReach(bs){
 function _boardFlags(t){
   var low=(t||"").toLowerCase(); if(!low.trim())return ""; var F=[];
   var br=boardRead(t);
-  if(br) F.push(["~","Board read "+br.s.toFixed(1),"Estimated 1–10 board-member score (Rules tab → How leaders read your package). "+br.why.join(" · ")]);
+  if(br) F.push(["~","Board read "+br.s.toFixed(1),"Estimated 1–10 reviewer score (Rules tab → How leaders read your package). "+br.why.join(" · ")]);
   if(br&&br.lens){ var r=br.lens;
     if(r.job) F.push(["!","Outputs only","Reviewer note: 'job statement / standard data' — nothing built, fixed, or conferred. Boards score this ~7–7.5. Add what changed because of you."]);
     if(r.attr) F.push(["!","Whose work?","Reviewer note: 'Was he here? Members did their jobs vs the leader taking credit.' Lead with your personal action, then the team result."]);
@@ -2200,17 +2200,17 @@ function valuationMatrixHTML(){
   h+='</div>';
   return h;
 }
-/* ===== v9.24: HOW LEADERS READ YOUR PACKAGE — the review perspective, written out so members can see every judgment a board member makes ===== */
+/* ===== v9.24: HOW LEADERS READ YOUR PACKAGE — the review perspective, written out as a neutral model so members can see every judgment a reviewer makes ===== */
 function reviewGuideHTML(){
   function tbl(head,rows){return '<table class="tablish" style="margin-top:8px"><tr>'+head.map(function(x){return '<th>'+x+'</th>';}).join("")+'</tr>'+rows.map(function(r){return '<tr>'+r.map(function(c,i){return '<td'+(i===0?' style="color:var(--gold);font-weight:700;min-width:120px"':'')+'>'+c+'</td>';}).join("")+'</tr>';}).join("")+'</table>';}
   function p(x){return '<div style="font-size:12px;line-height:1.55;margin-top:8px">'+x+'</div>';}
   function lbl(x){return '<div class="muted" style="font-size:10px;letter-spacing:.5px;margin:14px 0 2px">'+x+'</div>';}
   var h='<div class="ruleg" id="rules-review" style="border-color:var(--gold)"><h4>How leaders read your package — the review perspective</h4>';
-  h+='<div class="muted">This is the thinking a 374 MDG board member applies to every line, written out. Two reads happen: the <b>statement read</b> (quarterly/annual award boards score sentences) and the <b>record read</b> (Group and Wing stratification boards score the whole file). Every flag and chip in Bullet Forge maps back to one of the thoughts below.</div>';
+  h+='<div class="muted">This is the thinking a reviewer applies to every line when packages are scored, written out as a neutral model — not any specific board, cycle, instrument, or set of people. Two reads happen: the <b>statement read</b> (quarterly/annual award boards score sentences) and the <b>record read</b> (Group and Wing stratification scores the whole file). Every flag and chip in Bullet Forge maps back to one of the thoughts below.</div>';
 
   /* ---- 1. the statement read ---- */
   h+=lbl('1 · THE STATEMENT READ — HOW ONE LINE GETS ITS NUMBER');
-  h+=p('A board member reads each statement once, at speed, and writes a number 1–10 with a shorthand note in the margin. The statements are averaged, rounded to the nearest .5, then nudged for rank order against the other packages. Almost every statement lands between 7 and 9 — the whole competition happens inside two points. The margin notes below are the real vocabulary; the number is where that thought lands.');
+  h+=p('A reviewer reads each statement once, at speed, and writes a number 1–10 with a shorthand note in the margin. The statements are averaged, rounded to the nearest .5, then nudged for rank order against the other packages. Almost every statement lands between 7 and 9 — the whole competition happens inside two points. The margin notes below are the kind of shorthand reviewers write; the number is where that thought typically lands.');
   h+=tbl(["Margin note","What the reviewer is thinking","Lands at"],[
     ["“Job statement / standard data”","You described your duties with numbers attached. Visits, taskers, patients seen, dollars produced — expected outputs of the position. Nothing was built, fixed, changed, or conferred. The verb does not rescue it: <i>oversaw / managed / drove operations for</i> a team is still the job.","7.0 – 7.5"],
     ["“Did something” · “CPI” · “program management”","You changed a process, closed a gap, fixed a broken thing, or launched something that now exists. This is the first rung that separates a package from the job description.","8.0"],
@@ -2221,11 +2221,11 @@ function reviewGuideHTML(){
     ["“The impact is missing — hasn't been implemented”","Plans, concepts, proposals, drafts, “will save”, “on track to”. Boards score delivered results. Say what has already changed.","−.5 to −1.0"],
     ["“1x event”","A ceremony, drive, festival, DV visit, or single exercise. Capped near 8.0 unless the leadership numbers and the lasting result are big. Several events aggregated with a program-level result escape the cap.","≤ 8.0"],
     ["“Community involvement” vs “community mentorship”","Showing up scores 7.5. Leading a team or developing people while you were there scores 8.","7.5 / 8.0"],
-    ["“Is that number accurate?”","Any figure that outruns the role — hundreds mentored in a few weeks, wing-sized dollar claims at flight level, a 5-squadron reach nobody saw — gets challenged. If it does not survive the question it is discounted to standard data. Have the denominator.","discounted"],
+    ["“Is that number accurate?”","Any figure that outruns the role — hundreds mentored in a few weeks, wing-sized dollar claims at flight level, a multi-squadron reach nobody can confirm — gets challenged. If it does not survive the question it is discounted to standard data. Have the denominator.","discounted"],
     ["“Self-asserted #1 / best in PACAF”","A superlative you derived from data is standard data. A ranking a rater or board conferred — #1 of 12 MSgts, SNCO of the Quarter, a GO coin — is the discriminator.","no credit / +.5"],
     ["“Too wordy” · “grammar issues”","Every wasted character is a lost impact word; errors read as unpolished and the score drops half a point.","−.5"],
     ["“Reads like a WAC statement” · “job-type LOE”","The statement is in the wrong section, or the impact is written like a task list. Leadership lines belong in leadership; the Whole Airman line needs a leadership number too.","7.5 – 8.0"],
-    ["“82 characters left for a potential pass”","Space left in the box is space you could have spent on the result. Fill it with impact, not adjectives.","fill the box"]
+    ["“Characters left in the box”","Space left in the box is space you could have spent on the result. Fill it with impact, not adjectives.","fill the box"]
   ]);
   h+=p('<b>How the app estimates this:</b> the gold <b>Board read</b> chip on each 1206 statement starts at 7.0 (outputs only) or 7.5 (you built, fixed, or earned something), then adds .5 for an outcome, .5 for Wing/MAJCOM/AF/joint reach, .5 for conferred recognition or a rater strat, .5 for enterprise-first, .5 for team development yield, .5 for healthy leadership numbers; subtracts .5 for thin data, .5 for team-credit wording, .5 for not-yet-implemented work; caps single events at 8.0; and gives nothing for a self-asserted superlative. Hover the chip to see exactly why. The package bar averages the statements and rounds to .5, the same way a board sheet does.');
 
@@ -2244,27 +2244,27 @@ function reviewGuideHTML(){
   h+=p('<b>Recognition is weighed by who conferred it</b> (see the coin ladder below) <b>and by whose it is.</b> “Earning team accolades” credits the team. “Earning her Airman a Sq/CC coin” credits you as a developer. “Earning the Gp SNCO OTQ” credits you.');
 
   /* ---- 3. the record read ---- */
-  h+=lbl('3 · THE RECORD READ — HOW A GROUP / WING STRATIFICATION BOARD RACKS AND STACKS');
-  h+=p('When packages go to a Group or Wing rack &amp; stack, board members stop scoring sentences and score the record. This is the sixteen-dimension weighting used for the 374 MDG CY26 MSgt stratification. Weights sum to 100%; each dimension is scored 1–10; the composite is Σ(score × weight). The top four or five at Group go to Wing, where roughly 30–40 packages compete for a handful of numeric strats and a Top 25% bucket.');
-  h+=tbl(["Dimension","Wt","What scores a 10","How your writing feeds it"],[
-    ["HLR endorsement strength","12%","Forced Endorsement “Yes” plus explicit push language (“promote now”, “overdue”). The HLR's rank does not change the score.","Write the statements that make the push easy to sign; ask the rater for the language."],
-    ["SEL execution","12%","Sitting primary SEL billet beats interim fills. Staff count and AFSC breadth.","Name the billet, the head-count, the AFSCs, the duration."],
-    ["Numeric strat","10%","Approved “#X of Y” or a bucket (Top 25%). Draft placeholders do not count.","Get it on the signed eval — it is the single strongest discriminator."],
-    ["Career Flt Chief depth","8%","Number of permanent Flight Chief roles across bases; deployed flights count.","State “Flight Chief” with dates; interim ≠ permanent."],
-    ["Career MSM weight","7%","Total MSMs (basic + OLC).","Decorations follow the record; make sure every one is in PRDA."],
-    ["Wg / MAJCOM wins","6%","Awards WON at Wing or above this cycle.","Package up. A Group-only trophy case is the most common gap."],
-    ["Enterprise programs","6%","AF-first, DoD-first, MAJCOM-first initiatives owned.","Say the echelon the first belongs to."],
-    ["Current team size","5%","Raw number of Airmen directly supervised.","One clean number, defensible."],
-    ["Career deco ladder","5%","Total AFCM / AFAM / joint stack.","—"],
-    ["PCS deco compliance","5%","Every PCS covered by a decoration; gaps are flagged.","—"],
-    ["Team development yield","5%","Mentees promoted, DGs, BTZ, award winners produced under your lead.","Name the outcomes your people earned."],
-    ["AFSC breadth","4%","Number of AFSCs currently led.","State it."],
-    ["Career base breadth","4%","Assignments, tier mix, deployments.","—"],
-    ["Education / PME","4%","Degrees held; SNCOA, EJPME II status.","—"],
-    ["TIG + TIS maturity","4%","Time in grade at cycle close; time in service depth.","—"],
-    ["PT / fitness","3%","90+ Excellent · 80–89 Good · 75–79 concern.","—"]
+  h+=lbl('3 · THE RECORD READ — WHAT MSGT STRATIFICATION LOOKS LIKE WHEN LEADERS REVIEW');
+  h+=p('When packages go to a Group or Wing rack &amp; stack, reviewers stop scoring sentences and score the record. The table below is an illustrative model of the factors leaders weigh when they stratify MSgts — a neutral picture of relative emphasis, not an official instrument or any specific board; every board sets its own. Each factor is judged on its own scale and the heavier factors move the ranking more. The top few at Group typically go to Wing, where dozens of packages compete for a handful of numeric strats and a top bucket.');
+  h+=tbl(["Factor","Emphasis","What scores well","How your writing feeds it"],[
+    ["HLR endorsement strength","Heaviest","Forced Endorsement “Yes” plus explicit push language (“promote now”, “overdue”). The HLR's rank does not change the read.","Write the statements that make the push easy to sign; ask the rater for the language."],
+    ["SEL execution","Heaviest","Sitting primary SEL billet beats interim fills. Staff count and AFSC breadth.","Name the billet, the head-count, the AFSCs, the duration."],
+    ["Numeric strat","Heavy","Approved “#X of Y” or a bucket (Top 25%). Draft placeholders do not count.","Get it on the signed eval — it is the single strongest discriminator."],
+    ["Career Flt Chief depth","Heavy","Number of permanent Flight Chief roles across bases; deployed flights count.","State “Flight Chief” with dates; interim ≠ permanent."],
+    ["Career MSM weight","Moderate","Total MSMs (basic + OLC).","Decorations follow the record; make sure every one is in PRDA."],
+    ["Wg / MAJCOM wins","Moderate","Awards WON at Wing or above this cycle.","Package up. A Group-only trophy case is the most common gap."],
+    ["Enterprise programs","Moderate","AF-first, DoD-first, MAJCOM-first initiatives owned.","Say the echelon the first belongs to."],
+    ["Current team size","Moderate","Raw number of Airmen directly supervised.","One clean number, defensible."],
+    ["Career deco ladder","Moderate","Total AFCM / AFAM / joint stack.","—"],
+    ["PCS deco compliance","Moderate","Every PCS covered by a decoration; gaps are flagged.","—"],
+    ["Team development yield","Moderate","Mentees promoted, DGs, BTZ, award winners produced under your lead.","Name the outcomes your people earned."],
+    ["AFSC breadth","Light","Number of AFSCs currently led.","State it."],
+    ["Career base breadth","Light","Assignments, tier mix, deployments.","—"],
+    ["Education / PME","Light","Degrees held; SNCOA, EJPME II status.","—"],
+    ["TIG + TIS maturity","Light","Time in grade at cycle close; time in service depth.","—"],
+    ["PT / fitness","Light","90+ Excellent · 80–89 Good · 75–79 concern.","—"]
   ]);
-  h+=p('Read the weights: a third of the composite (34%) is billet + strat + endorsement, and another quarter is what you produced in other people and at enterprise level. Statements feed roughly half of these dimensions; the rest is the record itself. Reviewers also write a <b>strengths / concerns / verdict</b> card per candidate — the “Strong / Add” read on the eval page is the statement-level version of that card.');
+  h+=p('Read the emphasis: the heaviest factors are billet, strat, and endorsement; the next tier is what you produced in other people and at enterprise level. Statements feed roughly half of these factors; the rest is the record itself. Reviewers typically summarize each record as <b>strengths, concerns, and a verdict</b> — the “Strong / Add” read on the eval page is the statement-level version of that.');
 
   /* ---- 4. line-by-line record lens ---- */
   h+=lbl('4 · THE RECORD-REVIEW LENS — WHAT GETS CHECKED LINE BY LINE');
@@ -2281,7 +2281,7 @@ function reviewGuideHTML(){
     ["Before / after","“From X to Y” in at least one improving-the-unit statement.","Impact linkage"],
     ["Stratification language","“#X of Y” from the rater. At MSgt → SMSgt it is the discriminator.","Rater stratification"],
     ["Number credibility","Outliers get questioned; if you cannot defend the denominator, the line is discounted to standard data.","Defend the number"],
-    ["Acronyms","Anything a board member cannot decode is skipped, not admired.","Unverified acronym"],
+    ["Acronyms","Anything a reviewer cannot decode is skipped, not admired.","Unverified acronym"],
     ["Single events","Capped near 8 unless aggregated into a program with a lasting result.","Single event"],
     ["Self-asserted superlatives","“Best in PACAF” from your own data is standard data; a conferred ranking is the discriminator.","Self-asserted #1"]
   ]);
@@ -2470,7 +2470,7 @@ load(); applySettings(); renderAll(); initEx(); applyTheme((state.ui&&state.ui.t
 var APP_VERSION="9.24";
 var CHANGELOG=[
   {v:"9.24", d:"10 Sep 2026", notes:[
-     "Added board-member review coaching: a Board read score on each statement, reviewer flags, and a Rules-tab guide to how leaders read a package. Reference tab counts are now live."
+     "Added reviewer-perspective coaching: a Board read score on each statement, reviewer flags, and a Rules-tab guide to how leaders read a package. Reference tab counts are now live."
   ]},
   {v:"9.23", d:"9 Sep 2026", notes:[
      "Added a large batch of reference statements and decoration examples to the library."
