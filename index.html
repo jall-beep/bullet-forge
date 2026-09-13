@@ -3760,7 +3760,28 @@ function showThes(anchor,word,bid){
     fetch("https://api.datamuse.com/words?max=20&ml="+encodeURIComponent(word)).then(function(r){return r.json();}).catch(function(){return [];})
   ]).then(function(rs){ var seen={},merged=[]; (rs[0]||[]).concat(rs[1]||[]).forEach(function(o){ var k=(o.word||"").toLowerCase(); if(k&&k!==word.toLowerCase()&&!seen[k]){seen[k]=1;merged.push(o);} }); paintThes(word,merged); }).catch(function(){ paintThes(word,null); });
 }
+/* v9.30: the public thesaurus returns anatomical and vulgar senses for ordinary military words
+   (member, unit, discharge, staff, service). Screen those out of the synonym popup. */
+var THES_BLOCK=("penis penises phallus phalluses phallic penile pecker prick cock cocks dick dicks willy weenie wiener schlong "+
+ "genitalia genitals genital pudendum testicle testicles testis bollocks ballocks scrotum "+
+ "vagina vulva clitoris cunt twat "+
+ "erection ejaculate ejaculation semen sperm coitus copulation copulate intercourse fornication fornicate "+
+ "orgasm masturbate masturbation sodomy sodomize whore slut hooker prostitute prostitution pimp "+
+ "tit tits titty titties boob boobs knockers "+
+ "fuck fucked fucking shit shitty piss pissed crap crappy bastard bitch asshole arsehole "+
+ "bugger wanker tosser").split(/\s+/);
+var _THES_BAD=null;
+function thesClean(list){
+  if(!_THES_BAD){ _THES_BAD={}; THES_BLOCK.forEach(function(w){ _THES_BAD[w]=1; }); }
+  return (list||[]).filter(function(o){
+    var w=((o&&o.word)||"").toLowerCase(); if(!w) return false;
+    var toks=w.split(/[^a-z]+/);
+    for(var i=0;i<toks.length;i++){ if(_THES_BAD[toks[i]]) return false; }
+    return true;
+  });
+}
 function paintThes(word,list){
+  list=thesClean(list);
   var h='<div class="th-h" style="color:var(--gold)">\u2605 stronger \u00b7 '+escHtml(word)+'</div>';
   var bf=bfStrongFor(word);
   if(bf.length){ h+=bf.map(function(s){return '<span class="syn" style="border-color:var(--gold);color:var(--gold)" onclick="applySyn(\''+encodeURIComponent(s)+'\')">'+escHtml(s)+'</span>';}).join(""); }
@@ -5519,8 +5540,11 @@ function renderReference(){
 load(); applySettings(); renderAll(); initEx(); applyTheme((state.ui&&state.ui.theme)||"dark"); setMode((state.ui&&state.ui.mode)||'1206'); try{if(state.ui&&state.ui.tab)setTab(state.ui.tab);}catch(e){} growAll(); initUI(); updateSaveChip(); initShortcuts();
 
 /* ===== Version tracker ===== */
-var APP_VERSION="9.29";
+var APP_VERSION="9.30";
 var CHANGELOG=[
+  {v:"9.30", d:"13 Sep 2026", notes:[
+     "Synonym popup no longer shows anatomical or vulgar words. The public thesaurus returns those for ordinary military words like member, unit, staff and discharge, and they are now screened out."
+  ]},
   {v:"9.29", d:"13 Sep 2026", notes:[
      "Added a drafted model library: 1206, EPB, OPB and decoration examples written for 374 AW jobs and grounded in public 2023 to 2026 Yokota and PACAF events.",
      "Drafted models are badged everywhere they appear and can be filtered in or out on the Examples, EPB and Decoration pages.",
