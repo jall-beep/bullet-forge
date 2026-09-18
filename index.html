@@ -428,6 +428,7 @@ body.compact .bx{min-height:34px}
   <div class="score" id="score"></div>
   <div class="tools">
    <button class="btn sm" onclick="addBullet()">+ Statement</button>
+   <label class="btn sm" title="Shrink or pad the gaps so each statement lands inside the box. Your text is untouched. The preview under each statement is the output, and Copy takes that." style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="packChk" onchange="renderAll()" style="margin:0"> Auto-Space</label>
    <button class="btn sm" onclick="backupData()" title="Download all your data as a JSON backup">Backup</button>
    <button class="btn sm" onclick="document.getElementById('imp').click()" title="Restore from a JSON backup">Restore</button>
    <input id="imp" type="file" accept="application/json" style="display:none" onchange="importJSON(event)">
@@ -459,7 +460,6 @@ body.compact .bx{min-height:34px}
     <span class="muted" style="margin-left:8px">Headers, eligibility quotes &amp; wrapped lines handled automatically.</span></div>
    <div style="margin:0 0 12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" onclick="copyAllBullets()">Copy all</button><button class="btn sm" onclick="copyMD()">Copy MD</button><button class="btn sm" onclick="exportTxt()">.txt</button><button class="btn sm" onclick="exportCSV()">.csv</button><button class="btn sm" onclick="exportMD()">.md</button><button class="btn sm" onclick="printPkg()">Print</button><button class="btn sm" onclick="document.getElementById('impTxt').click()">Import .txt</button><button class="btn sm" onclick="autoCleanAll()">Auto-clean all</button><button class="btn sm" onclick="togglePreviews()">Previews</button><button class="btn sm" onclick="toggleDensity()">Density</button><button class="btn sm danger" onclick="clearAll()" style="margin-left:auto">Clear all</button></div>
    <div id="pkgbar"></div>
-   <div id="spacebar"></div>
    <div id="bullets"></div>
   </section>
   <aside class="side">
@@ -3404,24 +3404,43 @@ window.DECO={"templates": {"AAM": {"name": "Air & Space Achievement Medal", "ope
 /* ============ measurement engine (verified, Adobe-matched) ============ */
 var WIDTHS={" ":250,"!":333,"\"":408,"#":500,"$":500,"%":833,"&":778,"'":180,"(":333,")":333,"*":500,"+":564,",":250,"-":333,".":250,"/":278,"0":500,"1":500,"2":500,"3":500,"4":500,"5":500,"6":500,"7":500,"8":500,"9":500,":":278,";":278,"<":564,"=":564,">":564,"?":444,"@":921,"A":722,"B":667,"C":667,"D":722,"E":611,"F":556,"G":722,"H":722,"I":333,"J":389,"K":722,"L":611,"M":889,"N":722,"O":722,"P":556,"Q":722,"R":667,"S":556,"T":611,"U":722,"V":722,"W":944,"X":722,"Y":722,"Z":611,"[":333,"\\":278,"]":333,"^":469,"_":500,"`":333,"a":444,"b":500,"c":444,"d":500,"e":444,"f":333,"g":500,"h":500,"i":278,"j":278,"k":500,"l":278,"m":778,"n":500,"o":500,"p":500,"q":500,"r":333,"s":389,"t":278,"u":500,"v":500,"w":722,"x":500,"y":500,"z":444,"{":480,"|":200,"}":480,"~":541,"\u2019":333,"\u2018":333,"\u201c":444,"\u201d":444,"\u2013":500,"\u2014":1000,"\u00a0":250,"\u2000":500,"\u2001":1000,"\u2002":500,"\u2003":1000,"\u2004":333,"\u2005":250,"\u2006":167,"\u2007":500,"\u2008":250,"\u2009":200,"\u200a":100,"\u200b":0,"\u202f":200,"\u205f":222,"\u3000":1000,"\u2011":333,"\u2212":564};
 function charW(c){ var w=WIDTHS[c]; return (w===undefined)?500:w; }
-/* v9.31 narrow-space packing. The 1206 field is width-limited, not character-limited, so swapping the
-   normal space (250/1000 em) for a narrower Unicode space buys room without touching a single word.
-   Stored text may then contain U+2006 etc; nsp() hands every analyzer a normalised copy so grading,
-   verb detection, the thesaurus and the linter behave exactly as they did before. */
-var SPACE_MODES=[
-  ["normal","Normal",     " ", 250, "Standard word space."],
-  ["thin",  "Thin",       " ", 200, "U+2009 thin space. Safe everywhere, small gain."],
-  ["six",   "Six-per-em", " ", 167, "U+2006. The 1206 standard. Best balance of gain and readability."],
-  ["hair",  "Hair",       " ", 100, "U+200A hair space. Biggest gain, words start to crowd."]
-];
-var SPACE_CHARS=SPACE_MODES.map(function(m){return m[2];});
-function nsp(s){ return (s||"").replace(/[ -    ]/g," "); }
-function spaceMode(k){ for(var i=0;i<SPACE_MODES.length;i++){ if(SPACE_MODES[i][0]===k) return SPACE_MODES[i]; } return SPACE_MODES[0]; }
-function applySpace(s,k){ return nsp(s).replace(/ /g,spaceMode(k)[2]); }
-function detectSpace(s){
-  for(var i=1;i<SPACE_MODES.length;i++){ if((s||"").indexOf(SPACE_MODES[i][2])>-1) return SPACE_MODES[i][0]; }
-  return "normal";
+/* v9.31 Auto-Space, modelled on the AF Bullet Shaping Tool (af-vcd.github.io/pdf-bullets).
+   The 1206 field is width-limited, not character-limited, so the lever is the space itself:
+     U+2006 six-per-em  (167/1000 em) shrinks a line that spills
+     U+2004 three-per-em (333/1000 em) pads a last line that ends short
+   Only as many gaps change as the fit needs, and the stored text is never touched, so grading,
+   verb detection, the thesaurus and the linter all keep reading clean ASCII. */
+var PACK_NARROW=" ", PACK_WIDE=" ";
+function nsp(s){ return (s||"").replace(/[  -   ]/g," "); }
+function packOn(){ var el=document.getElementById("packChk"); return !!(el&&el.checked); }
+function _swapNth(t,ch,n){ var i=0; return t.replace(/ /g,function(m){ return (i++<n)?ch:m; }); }
+function _spaces(t){ return (t.match(/ /g)||[]).length; }
+function autoSpace(raw){
+  var t=nsp(raw||"");
+  if(!t.trim()) return {t:t,ok:true,mode:"none",n:0};
+  var max=getMaxLines(), W=effWidthPt(), sp=_spaces(t), lines=wrap(t);
+  if(lines.length>max){
+    for(var n=1;n<=sp;n++){
+      var c=_swapNth(t,PACK_NARROW,n);
+      if(wrap(c).length<=max) return {t:c,ok:true,mode:"packed",n:n};
+    }
+    return {t:_swapNth(t,PACK_NARROW,sp),ok:false,mode:"over",n:sp};
+  }
+  if(lines.length===max && textW(lines[lines.length-1]||"")/W < 0.96){
+    var best=t,bn=0;
+    for(var w=1;w<=sp;w++){
+      var cw=_swapNth(t,PACK_WIDE,w), Lw=wrap(cw);
+      if(Lw.length>max) break;
+      var f=textW(Lw[Lw.length-1]||"")/W;
+      if(f>1) break;
+      best=cw; bn=w;
+      if(f>=0.96) break;
+    }
+    if(bn) return {t:best,ok:true,mode:"padded",n:bn};
+  }
+  return {t:t,ok:true,mode:"fit",n:0};
 }
+function outText(s){ return packOn()? autoSpace(s).t : nsp(s); }
 function $(id){ return document.getElementById(id); }
 function getW(){ return parseFloat($("pW").value)||202.321; }
 function getFontPt(){ return parseFloat($("pPt").value)||12; }
@@ -3663,7 +3682,6 @@ function renderScore(){
 function renderAll(){
   persistSettings();
   var freq=computeFreq(); var host=$("bullets"); host.innerHTML="";
-  var sb=$("spacebar"); if(sb) sb.innerHTML = state.bullets.length? spaceBarHTML() : "";
   if(!state.bullets.length){
     host.innerHTML='<div class="empty"><b>No statements yet.</b><br>Paste a package above or click <b>+ Statement</b>. '+
       'Pull a proven line from the <b>Examples</b> tab to start.</div>';
@@ -3671,7 +3689,8 @@ function renderAll(){
   }
   var _verbCounts={}; state.bullets.forEach(function(bb){var vv=(openingVerb(bb.text)||"").toLowerCase(); if(vv)_verbCounts[vv]=(_verbCounts[vv]||0)+1;});
   state.bullets.forEach(function(b,i){
-    var lines=wrap(b.text); var over=lines.length>getMaxLines();
+    var _as=packOn()?autoSpace(b.text):{t:nsp(b.text),ok:true,mode:"off",n:0};
+    var _out=_as.t; var lines=wrap(_out); var over=lines.length>getMaxLines();
     var card=document.createElement("div"); card.className="bcard"+(over?" over":"");
     var v=openingVerb(b.text); var tier=verbTierOf(v);
     var tierTag = v? (tier?('<span class="tag t'+tier+'">'+v+' · Tier '+tier+'</span>'):'<span class="tag no">'+v+' · weak open</span>') : '';
@@ -3696,12 +3715,15 @@ function renderAll(){
     var scopeHTML='<div class="scopebar">'+scopes.map(function(s){return '<div class="s'+(s.on?' on':'')+'" title="'+s.tier+'"></div>';}).join("")+
       '<small>'+(onCount?('reaches '+topTier+(onCount>=2?' · '+onCount+' tiers':'')):'add scope')+'</small></div>';
     var w=textW(lines[lines.length-1]||""); var lastFrac=Math.round(w/effWidthPt()*100);
+    var _saved = _as.mode==="packed" ? (" \u00b7 auto-spaced, "+_as.n+" gap"+(_as.n!=1?"s":"")+" tightened")
+              : _as.mode==="padded" ? (" \u00b7 auto-spaced, "+_as.n+" gap"+(_as.n!=1?"s":"")+" padded to fill")
+              : _as.mode==="over"   ? " \u00b7 spacing cannot save it"
+              : "";
     var fillW=Math.min(100,Math.round((lines.length-1)*100/getMaxLines()+ (w/effWidthPt())*100/getMaxLines()));
-    var _tight=(detectSpace(b.text)!=="normal");
     var _avgCh=0; var _bare=nsp(b.text).replace(/ /g,""); if(_bare.length)_avgCh=textW(_bare)/_bare.length;
     var _gainCh=_avgCh? Math.round(spaceGain(b.text,pkSpaceMode())/_avgCh) : 0;
+    if(_as.mode==="over"){ flagHTML+='<div class="flag err"><b>Auto-Space cannot fix this</b> Even with every gap at six-per-em it still runs past '+getMaxLines()+' line(s). Cut a word or abbreviate.</div>'; }
     var atMax=(lines.length===getMaxLines()); var gap=100-lastFrac;
-    if(atMax && over && !_tight && _gainCh>0){ flagHTML+='<div class="flag warn"><b>Packing would free ~'+_gainCh+' characters</b> Swapping every space for a '+spaceMode(pkSpaceMode())[1].toLowerCase()+' space may pull this back inside the box without cutting a word. Use <b>Pack ␣</b> below.</div>'; }
     if(atMax && !over && lastFrac<96){ flagHTML+='<div class="flag err"><b>Line-'+getMaxLines()+' gap '+gap+'%</b> Trailing white space too large. Add ~'+Math.max(1,Math.ceil((96-lastFrac)/4))+' more word(s) or a qualifier so the last line fills \u226596%.</div>'; }
     var _vk=(v||"").toLowerCase();
     if(_vk && _verbCounts[_vk]>1){ flagHTML+='<div class="flag err"><b>Duplicate verb \''+v+'\'</b> '+_verbCounts[_vk]+' statements open with this verb. Every statement in a package must use a different opening verb.</div>'; }
@@ -3718,7 +3740,6 @@ function renderAll(){
       '<div class="brow"><button class="btn sm" onclick="copyText(\''+b.id+'\')">Copy</button>'+
         '<button class="btn sm" onclick="autoClean(\''+b.id+'\')">Auto-clean</button>'+
         '<button class="btn sm" onclick="tightenNums(\''+b.id+'\')">Condense #s</button>'+
-        '<button class="btn sm'+(_tight?' on':'')+'" title="'+(_tight?'Restore normal spaces':'Swap every space for a '+spaceMode(pkSpaceMode())[1].toLowerCase()+' space — frees about '+_gainCh+' characters of room')+'" onclick="toggleTight(\''+b.id+'\')">'+(_tight?'▪ Packed':'Pack ␣')+'</button>'+
         '<button class="btn sm" onclick="dupBullet(\''+b.id+'\')">Duplicate</button>'+
         '<button class="btn sm" title="Move up" onclick="moveBullet(\''+b.id+'\',-1)">↑</button>'+
         '<button class="btn sm" title="Move down" onclick="moveBullet(\''+b.id+'\',1)">↓</button>'+
@@ -3747,47 +3768,12 @@ function tightenNums(id){
     .replace(/ and /g," & ").replace(/ {2,}/g," ");
   save(); renderAll();
 }
-/* v9.31 space packing */
-function pkSpaceMode(){ return (state.spaceMode||"six"); }
-function setPkSpaceMode(k){ state.spaceMode=k; save(); renderAll(); }
-function spaceGain(txt,k){
-  var a=nsp(txt); if(!a.trim())return 0;
-  return (textW(a)-textW(applySpace(a,k)));
-}
-function toggleTight(id){
-  var b=state.bullets.find(function(x){return x.id==id;}); if(!b)return;
-  var cur=detectSpace(b.text);
-  b.text = (cur==="normal") ? applySpace(b.text,pkSpaceMode()) : nsp(b.text);
-  save(); renderAll();
-  flashToast(cur==="normal" ? "Packed with "+spaceMode(pkSpaceMode())[1].toLowerCase()+" spaces" : "Spaces restored to normal");
-}
-function tightenAll(){
-  var k=pkSpaceMode(), n=0;
-  state.bullets.forEach(function(b){ if(b.text.trim() && detectSpace(b.text)==="normal"){ b.text=applySpace(b.text,k); n++; } });
-  save(); renderAll();
-  flashToast(n? ("Packed "+n+" statement"+(n!=1?"s":"")+" with "+spaceMode(k)[1].toLowerCase()+" spaces") : "Nothing to pack.");
-}
-function looseAll(){
-  var n=0;
-  state.bullets.forEach(function(b){ if(detectSpace(b.text)!=="normal"){ b.text=nsp(b.text); n++; } });
-  save(); renderAll();
-  flashToast(n? ("Restored "+n+" statement"+(n!=1?"s":"")) : "All statements already use normal spaces.");
-}
-function spaceBarHTML(){
-  var k=pkSpaceMode(), packed=state.bullets.filter(function(b){return b.text.trim()&&detectSpace(b.text)!=="normal";}).length;
-  var chips=SPACE_MODES.slice(1).map(function(m){
-    return '<button class="btn sm'+(m[0]===k?' on':'')+'" title="'+escHtml(m[4])+'" onclick="setPkSpaceMode(\''+m[0]+'\')">'+m[1]+'</button>';
-  }).join("");
-  return '<div class="spacebar" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:8px 0">'+
-    '<span class="muted" style="font-size:10px;letter-spacing:.5px">SPACE PACKING</span>'+chips+
-    '<button class="btn sm" onclick="tightenAll()">Pack all</button>'+
-    '<button class="btn sm" onclick="looseAll()">Restore all</button>'+
-    '<span class="muted" style="font-size:10px">'+(packed?(packed+" packed"):"none packed")+' · the 1206 box is width-limited, not character-limited</span></div>';
-}
-function copyText(id){ var b=state.bullets.find(function(x){return x.id==id;}); if(b)navigator.clipboard.writeText(b.text); }
-function copyAllBullets(){ var bs=state.bullets.filter(function(b){return b.text.trim();}).map(function(b){return "- "+b.text.trim();}); if(!bs.length){flashToast("No statements to copy.");return;} navigator.clipboard.writeText(bs.join("\n")); flashToast("Copied "+bs.length+" statement"+(bs.length!=1?"s":"")+"."); }
+function copyText(id){ var b=state.bullets.find(function(x){return x.id==id;}); if(!b)return;
+  navigator.clipboard.writeText(outText(b.text));
+  flashToast(packOn()?"Copied with packed spaces":"Copied"); }
+function copyAllBullets(){ var bs=state.bullets.filter(function(b){return b.text.trim();}).map(function(b){return "- "+outText(b.text).trim();}); if(!bs.length){flashToast("No statements to copy.");return;} navigator.clipboard.writeText(bs.join("\n")); flashToast("Copied "+bs.length+" statement"+(bs.length!=1?"s":"")+"."); }
 function exportTxt(){ var bs=state.bullets.filter(function(b){return b.text.trim();}); if(!bs.length){flashToast("No statements to export.");return;} var g=pkgGrade(); var lines=["BulletForge package export","Generated "+new Date().toLocaleString()]; if(g)lines.push("Package grade: "+g.score+"/100 ("+gradeBand(g.score)[0]+")"); lines.push("");
-  bs.forEach(function(b,i){ var gg=grade1206(b.text); lines.push((i+1)+". "+b.text.trim()); lines.push("   ["+gg.score+"/100]"); lines.push(""); });
+  bs.forEach(function(b,i){ var gg=grade1206(b.text); lines.push((i+1)+". "+outText(b.text).trim()); lines.push("   ["+gg.score+"/100]"); lines.push(""); });
   var blob=new Blob([lines.join("\n")],{type:"text/plain"}); var url=URL.createObjectURL(blob); var a=document.createElement("a"); a.href=url; a.download="bullet_forge_package.txt"; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); flashToast("Exported "+bs.length+" statement"+(bs.length!=1?"s":"")+"."); }
 
 /* ============ hover thesaurus ============ */
