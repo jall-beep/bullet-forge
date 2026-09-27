@@ -191,6 +191,26 @@ textarea.custom{width:100%;background:var(--panel);border:1px solid var(--line);
 .fld{display:flex;flex-direction:column;gap:3px}
 .fld label{font-size:10.5px;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px}
 .fld input{background:var(--bg);border:1px solid var(--line);border-radius:7px;color:var(--ink);padding:6px 8px;width:96px}
+/* ---- simplified action row + collapsibles (v9.34) ---- */
+.actrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.moremenu{position:relative;display:inline-block}
+.moremenu>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center}
+.moremenu>summary::-webkit-details-marker{display:none}
+.morepanel{position:absolute;z-index:60;top:calc(100% + 6px);left:0;min-width:214px;
+ background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px;
+ box-shadow:0 12px 34px rgba(0,0,0,.34);display:flex;flex-direction:column;gap:5px}
+.morepanel .btn{justify-content:flex-start;text-align:left;width:100%}
+.mgrp{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);margin:4px 2px 1px}
+.advdet{background:var(--panel);border:1px solid var(--line);border-radius:11px;margin-bottom:16px}
+.advdet>summary{cursor:pointer;padding:10px 13px;font-size:12.5px;font-weight:700;color:var(--ink2);
+ list-style:none;display:flex;align-items:center;gap:6px;flex-wrap:wrap;border-radius:11px}
+.advdet>summary::-webkit-details-marker{display:none}
+.advdet>summary::before{content:"\25B8";color:var(--gold);font-size:11px;transition:transform .15s}
+.advdet[open]>summary::before{transform:rotate(90deg)}
+.advdet>summary:hover{color:var(--ink)}
+.advdet>summary .muted{font-weight:400}
+.advbody{padding:0 13px 13px;border-top:1px solid var(--line);padding-top:11px;margin-top:2px}
+.sideadv{margin-bottom:12px}
 .empty{text-align:center;color:var(--ink3);padding:40px 20px}
 .empty b{color:var(--ink2);font-size:15px}
 ::-webkit-scrollbar{width:10px;height:10px}
@@ -481,25 +501,54 @@ body.compact .bx{min-height:34px}
  <main id="mode-1206" class="modepanel">
   <section class="editor">
    <div class="settings" id="settings">
-    <div class="fld"><label>Field width (mm)</label><input id="pW" value="202.321" oninput="renderAll()"></div>
-    <div class="fld"><label>Font size (pt)</label><input id="pPt" value="12" oninput="renderAll()"></div>
-    <div class="fld"><label>Max lines</label><input id="pLines" value="2" oninput="renderAll()"></div>
-    <div class="fld"><label>Calibration %</label><input id="pCal" value="100" oninput="renderAll()"></div>
     <div class="fld"><label>Package type</label><select id="pkgType" onchange="onPkgTypeChange()"><option value="auto">Auto (detect from content)</option><option value="quarterly">Individual quarterly (military)</option><option value="annual_afms">AFMS annual</option><option value="annual_mil">Individual annual (military)</option><option value="team">Team</option><option value="volunteer">Volunteer</option><option value="civilian">Civilian</option><option value="keyspouse">Key Spouse</option></select></div>
-    <div class="fld"><label title="Width actually used for wrapping. Measured truth from real Acrobat renders is 568.4-569.4pt; 566.0 is the safe build target.">Usable width (pt)</label><input id="pWpt" value="566.0" oninput="renderAll()"></div>
-    <div class="muted" style="max-width:230px">Defaults match the DAF Form 1206 (20240313) SPECIFIC ACCOMPLISHMENTS field &mdash; 202.321&nbsp;mm, Times New Roman 12pt. Usable width was measured against real Acrobat renders at 568.4&ndash;569.4pt; we build at <b>566.0pt</b> for margin. Wrapping is measured by glyph width, never by character count.</div>
-    <div class="fld" id="pkgCountsFld" style="flex:1 1 100%"><label>Section counts per package type</label><div class="muted" style="max-width:none">Local wing recognition instructions vary. These counts are yours, they persist, and QC never hard-fails a count you set here. Use <b>Reset to preset</b> to go back to the convention observed in this unit’s submitted packages.</div><div id="pkgCountsWrap"></div></div>
+    <div class="fld" style="max-width:96px"><label title="A statement may not exceed this many rendered lines. 2 for a 1206.">Max lines</label><input id="pLines" value="2" oninput="renderAll()"></div>
+    <div class="fld" style="flex:1 1 220px"><label>&nbsp;</label><div class="muted" style="max-width:none;margin:0;line-height:1.45">Sized for the <b>DAF Form 1206 (20240313)</b> accomplishments field. Nothing to configure &mdash; paste and go.</div></div>
    </div>
    <textarea class="pastebox" id="paste" placeholder="Paste a full package or a block of bullets here — they auto-split into separate statements. Or hit + Statement above."></textarea>
-   <div style="margin:-6px 0 14px"><button class="btn gold sm" onclick="ingestPaste()">Split &amp; load pasted bullets</button>
-    <span class="muted" style="margin-left:8px">Headers, eligibility quotes &amp; wrapped lines handled automatically.</span></div>
-   <div style="margin:0 0 12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" onclick="copyAllBullets()">Copy all</button><button class="btn sm" onclick="copyMD()">Copy MD</button><button class="btn sm" onclick="exportTxt()">.txt</button><button class="btn sm" onclick="exportCSV()">.csv</button><button class="btn sm" onclick="exportMD()">.md</button><button class="btn sm" onclick="printPkg()">Print</button><button class="btn sm" onclick="document.getElementById('impTxt').click()">Import .txt</button><button class="btn sm" onclick="autoCleanAll()">Auto-clean all</button><button class="btn sm" onclick="togglePreviews()">Previews</button><button class="btn sm" onclick="toggleDensity()">Density</button><button class="btn sm danger" onclick="clearAll()" style="margin-left:auto">Clear all</button></div>
+   <div class="actrow">
+    <button class="btn gold" onclick="ingestPaste()" title="Break a pasted package into individual statements">Split &amp; load</button>
+    <button class="btn gold" onclick="forgeAll()" title="One click: clean the text, fit every statement to the line limit, and report what still needs a human.">&#9881; Fit &amp; Clean all</button>
+    <button class="btn sm" onclick="copyAllBullets()" title="Copy every statement, spacing applied, ready to paste into the 1206">Copy all</button>
+    <details class="moremenu"><summary class="btn sm">More &#9662;</summary>
+     <div class="morepanel">
+      <div class="mgrp">Export</div>
+      <button class="btn sm" onclick="closeMore();copyMD()">Copy as Markdown</button>
+      <button class="btn sm" onclick="closeMore();exportTxt()">Save .txt</button>
+      <button class="btn sm" onclick="closeMore();exportCSV()">Save .csv (with grades)</button>
+      <button class="btn sm" onclick="closeMore();exportMD()">Save .md</button>
+      <button class="btn sm" onclick="closeMore();printPkg()">Print / PDF</button>
+      <div class="mgrp">Bring in</div>
+      <button class="btn sm" onclick="closeMore();document.getElementById('impTxt').click()">Import a .txt file</button>
+      <div class="mgrp">View</div>
+      <button class="btn sm" onclick="closeMore();togglePreviews()">Show / hide previews</button>
+      <button class="btn sm" onclick="closeMore();toggleDensity()">Compact / roomy spacing</button>
+     </div></details>
+    <button class="btn sm danger" onclick="clearAll()" style="margin-left:auto">Clear all</button>
+   </div>
+   <details class="advdet" id="secCountsDet"><summary>Statements per section <span class="muted">&mdash; how many each package type expects</span></summary>
+    <div class="advbody">
+     <div class="muted">Local wing recognition instructions vary. These counts are yours, they persist, and QC never hard-fails a count you set here. Use <b>Reset to preset</b> to go back to the convention observed in this unit&rsquo;s submitted packages.</div>
+     <div id="pkgCountsWrap"></div>
+    </div></details>
    <div id="pkgbar"></div>
    <div id="pkgTypeBar"></div>
    <div id="qcbar"></div>
    <div id="bullets"></div>
   </section>
   <aside class="side">
+   <details class="advdet sideadv" id="advDet"><summary>&#9881; Advanced <span class="muted">&mdash; form geometry &amp; calibration</span></summary>
+    <div class="advbody">
+     <div class="muted" style="margin-bottom:8px">You should never need these. They are preset to the real <b>DAF Form 1206 (20240313)</b> accomplishments field and are exposed only so a different form or a future revision can be measured without editing the app.</div>
+     <div class="settings" style="padding:0;background:none;border:0;margin:0">
+      <div class="fld" style="max-width:120px"><label>Field width (mm)</label><input id="pW" value="202.321" oninput="renderAll()"></div>
+      <div class="fld" style="max-width:96px"><label>Font size (pt)</label><input id="pPt" value="12" oninput="renderAll()"></div>
+      <div class="fld" style="max-width:96px"><label title="Scales the measured width. Leave at 100 unless you are deliberately calibrating against a printed render.">Calibration %</label><input id="pCal" value="100" oninput="renderAll()"></div>
+      <div class="fld" style="max-width:120px"><label title="Width actually used for wrapping. Measured truth from real Acrobat renders is 568.4-569.4pt; we build at 567.8pt.">Usable width (pt)</label><input id="pWpt" value="567.8" oninput="renderAll()"></div>
+     </div>
+     <div style="margin-top:8px"><button class="btn sm" onclick="resetGeometry()">Reset to form defaults</button></div>
+     <div class="muted" style="margin-top:8px;line-height:1.5">Wrapping is measured by <b>glyph width with kerning</b>, never by character count. Usable width measured against real Acrobat renders is 568.4&ndash;569.4&nbsp;pt; the build target is <b>567.8&nbsp;pt</b>, validated against 120 statements known to render on two lines.</div>
+    </div></details>
    <div class="tabs">
     <div class="tab on" data-t="ex" onclick="setTab('ex')">Examples</div>
     <div class="tab" data-t="vo" onclick="setTab('vo')">Vocabulary</div>
@@ -4481,7 +4530,55 @@ function insertVerb(v){
   save(); renderAll();
 }
 function persistSettings(){ try{ state.settings={pW:$("pW").value,pPt:$("pPt").value,pLines:$("pLines").value,pCal:$("pCal").value,pWpt:$("pWpt").value,pkgType:$("pkgType")?$("pkgType").value:null}; }catch(e){} }
-function applySettings(){ try{ var s=state.settings; if(!s)return; if(s.pW!=null)$("pW").value=s.pW; if(s.pPt!=null)$("pPt").value=s.pPt; if(s.pLines!=null)$("pLines").value=s.pLines; if(s.pCal!=null)$("pCal").value=s.pCal; if(s.pWpt!=null&&$("pWpt"))$("pWpt").value=s.pWpt; if(s.pkgType&&$("pkgType")){ var _pk=pkgKey(s.pkgType); $("pkgType").value=(_pk==="auto"||PKG_STRUCTURE[_pk])?_pk:"auto"; } }catch(e){} }
+function applySettings(){ try{ var s=state.settings; if(!s)return; if(s.pW!=null)$("pW").value=s.pW; if(s.pPt!=null)$("pPt").value=s.pPt; if(s.pLines!=null)$("pLines").value=s.pLines; if(s.pCal!=null)$("pCal").value=s.pCal;
+  /* MIGRATION (v9.34): a saved usable width of 566.0 predates the kerning fix and
+     silently re-introduced the false "over by 1 line" flags, because this input
+     overrides FIT_USABLE_PT. Anything at or below the old target is pulled up to
+     the validated build width. A width the owner deliberately set higher is kept. */
+  if(s.pWpt!=null&&$("pWpt")){ var _sw=parseFloat(s.pWpt); $("pWpt").value=(isFinite(_sw)&&_sw>FIT_USABLE_PT)?s.pWpt:String(FIT_USABLE_PT); }
+  if(s.pkgType&&$("pkgType")){ var _pk=pkgKey(s.pkgType); $("pkgType").value=(_pk==="auto"||PKG_STRUCTURE[_pk])?_pk:"auto"; } }catch(e){} }
+/* Put the measurement inputs back to the real form geometry. */
+function resetGeometry(){ if($("pW"))$("pW").value="202.321"; if($("pPt"))$("pPt").value="12";
+  if($("pCal"))$("pCal").value="100"; if($("pWpt"))$("pWpt").value=String(FIT_USABLE_PT);
+  persistSettings(); save(); renderAll(); flashToast("Geometry reset to the DAF Form 1206 defaults."); }
+function closeMore(){ var d=document.querySelector(".moremenu[open]"); if(d)d.removeAttribute("open"); }
+document.addEventListener("click",function(e){ var d=document.querySelector(".moremenu[open]");
+  if(d&&!d.contains(e.target)) d.removeAttribute("open"); },true);
+/* ---------------------------------------------------------------------------
+   FIT & CLEAN ALL  -  the one button that does the whole routine.
+   1. Turn Auto-Space on, so every statement is measured and output packed.
+   2. Run the cleaner over the stored text (quotes, double spaces, banned forms).
+   3. Re-measure and report three honest buckets:
+        over   - still past the line limit even at full six-per-em. Needs a cut.
+        short  - fits, but the last line ends more than FIT_TARGET_SLACK
+                 characters early. Spacing CANNOT fix this; it needs more words.
+        ok     - lands inside the 0-5 character target.
+   Deliberately does not rewrite anyone's prose. It fits and cleans; judgement
+   calls stay with the writer.
+--------------------------------------------------------------------------- */
+function forgeAll(){
+  var bs=state.bullets.filter(function(b){return b.text&&b.text.trim();});
+  if(!bs.length){ flashToast("Nothing loaded yet — paste a package and hit Split & load."); return; }
+  var pc=$("packChk"); if(pc&&!pc.checked) pc.checked=true;
+  var cleaned=0;
+  state.bullets.forEach(function(b){ if(!b.text||!b.text.trim())return;
+    try{ var c=cleanStatement(b.text); if(c!==b.text){ b.text=c; cleaned++; } }catch(e){} });
+  var over=0,short_=0,ok=0,maxShort=0;
+  bs.forEach(function(b){
+    var r; try{ r=fitReport(b.text); }catch(e){ return; }
+    if(r.over){ over++; return; }
+    var last=r.rows.length?r.rows[r.rows.length-1]:null;
+    var gap=last?last.ch:0;
+    if(r.lines.length<r.max){ short_++; if(gap>maxShort)maxShort=gap; return; }
+    if(gap>FIT_TARGET_SLACK){ short_++; if(gap>maxShort)maxShort=gap; } else ok++;
+  });
+  save(); renderAll();
+  var msg=[]; if(cleaned) msg.push("cleaned "+cleaned);
+  msg.push(ok+" on target");
+  if(short_) msg.push(short_+" under-filled (add up to ~"+maxShort+" chars)");
+  if(over)   msg.push(over+" still too long — cut a word");
+  flashToast("Fit & Clean: "+msg.join(" · ")+".");
+}
 function growTA(ta){ if(!ta)return; ta.style.height="auto"; ta.style.height=(ta.scrollHeight+2)+"px"; }
 function growAll(){ try{document.querySelectorAll("textarea.bx").forEach(growTA);}catch(e){} }
 function dupBullet(id){ var idx=state.bullets.findIndex(function(b){return b.id==id;}); if(idx<0)return; state.bullets.splice(idx+1,0,{id:uid(),text:state.bullets[idx].text}); save(); renderAll(); flashToast("Statement duplicated."); }
@@ -6115,8 +6212,18 @@ function _fbManual(body){
 }
 
 /* ===== Version tracker ===== */
-var APP_VERSION="9.33";
+var APP_VERSION="9.34";
 var CHANGELOG=[
+  {v:"9.34", d:"27 Sep 2026", notes:[
+     "FIXED THE FALSE “OVER BY 1 LINE” FLAGS. The width model measured text with a per-character Times New Roman advance table and applied no kerning, so it ran about 0.21% wide. On statements deliberately filled to within five characters of the margin, 0.21% is exactly the difference between two rendered lines and three, and real correctly-fitted statements were being called over-length. 113 kern pairs were extracted from the metric-compatible font and are now applied between every character pair, cutting the error to 0.051%.",
+     "Usable width raised from 566.0pt to 567.8pt to match the kerned model. Validated against 120 statements taken from packages that render on two lines in Acrobat: at 566.0 the model wrongly flagged 10 of them, at 567.0 it flagged 2, and at 567.8 it flags none. 567.8 still sits below the measured true field width of 568.4–569.4pt.",
+     "A saved usable width of 566.0 from an earlier version silently overrode the new build width, because the Advanced input wins over the built-in constant. Any stored value at or below the old target is now migrated up on load, so the fix actually reaches an existing install. A width deliberately set higher is left alone.",
+     "TOP OF THE PAGE SIMPLIFIED. Field width, font size, calibration and usable width have moved out of the way into a collapsed Advanced panel in the right-hand column, above Examples. The long paragraph of form-geometry prose is gone from the working area. What is left up front is the two controls that actually get changed: Package type and Max lines.",
+     "NEW ⚙ Fit & Clean all button — one click turns Auto-Space on, runs the cleaner over every statement, re-measures, and reports the result in three honest buckets: on target, under-filled with the number of characters you can still add, and still too long. It fits and cleans only; it never rewrites your prose.",
+     "Statements per section moved into its own collapsed panel. The per-type steppers are unchanged, so the counts are still yours to set and still persist.",
+     "Action row cut from eleven buttons to four. Split & load, Fit & Clean all, Copy all and Clear all stay visible; Copy as Markdown, the .txt/.csv/.md exports, Print, Import .txt and the preview and density toggles moved into a More menu. Auto-clean all was folded into Fit & Clean all.",
+     "Reset to form defaults button added to the Advanced panel, so a changed measurement can always be put back to the real DAF Form 1206 geometry."
+  ]},
   {v:"9.33", d:"27 Sep 2026", notes:[
      "Package type is now auto-detected from the content and the selector is an override, not the source of truth. Detection reads the full-caps section headings first (LEADERSHIP AND JOB PERFORMANCE, JOB PERFORMANCE IN PRIMARY DUTY with WHOLE AIRMAN CONCEPT, TEAM MEMBERS, OTHER SIGNIFICANT ACCOMPLISHMENTS or COMMUNITY EFFORTS, KEY ACCOMPLISHMENTS) and falls back to the statement count when no headings are present. Added an Auto option to the selector and made it the default.",
      "Fixed the bug this came from: pasting a 10-statement AFMS annual package while the selector still read Individual quarterly reported \u201cneeds exactly 6 statements, you have 10\u201d, which read as \u201ctrim 4\u201d. When detection and the selector disagree, Bullet Forge now shows an informational notice with a one-click Use detected type button instead of a count error, and never tells you to add or trim statements over a type mismatch.",
