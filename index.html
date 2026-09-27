@@ -131,6 +131,7 @@ main{display:flex;flex:1;min-height:0}
 .flag.err{background:rgba(255,92,108,.1);border:1px solid rgba(255,92,108,.3);color:#ffb3bb}
 .flag.warn{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.28);color:#ffd9a0}
 .flag.tip{background:rgba(74,155,255,.08);border:1px solid rgba(74,155,255,.25);color:#bcd6ff}
+.flag.ok{background:rgba(58,200,140,.08);border:1px solid rgba(58,200,140,.28);color:#a7e9c8}
 .flag b{font-weight:700}
 .swap{display:inline-block;background:var(--chip);border:1px solid var(--line);border-radius:14px;
  padding:1px 9px;margin:0 3px 3px 0;cursor:pointer;font-size:11.5px;color:#cfe0ff;font-family:-apple-system,sans-serif}
@@ -405,6 +406,23 @@ body.compact .bx{min-height:34px}
 #pkgbar .pkgcount{color:var(--ink2);font-weight:600}
 #pkgbar .pkgtip{color:var(--ink)}
 #pkgbar .pkgtip b{color:var(--gold)}
+#qcbar{margin:0 0 12px}
+#bfFooter{max-width:1500px;margin:26px auto 30px;padding:12px 18px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink3);line-height:1.6}
+#bfFooter .bf-note{margin-bottom:5px;color:var(--ink2)}
+#bfFooter .bf-row{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline}
+#bfFooter b{color:var(--gold)}
+#bfFooter code{font-size:10.5px}
+#bfFooter .bf-sep{opacity:.5}
+#bfFooter .bf-uses{flex:1 1 420px;min-width:260px}
+#bfFooter .bf-link{background:none;border:none;padding:0;font:inherit;color:var(--acc);text-decoration:underline;cursor:pointer}
+#fbModal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;display:none;align-items:center;justify-content:center}
+#fbModal .fbbox{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;width:min(520px,92vw);display:flex;flex-direction:column;gap:9px}
+#fbModal h3{margin:0;color:var(--gold);font-size:15px}
+#fbModal textarea{width:100%;min-height:130px;background:var(--bg);border:1px solid var(--line);border-radius:7px;color:var(--ink);padding:9px;font:inherit;resize:vertical}
+#fbModal .fbrow{display:flex;gap:8px;justify-content:flex-end}
+
+#qcbar .qchead{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);font-weight:700;margin:0 0 5px}
+#qcbar .flag{margin-bottom:4px}
 .favbtn.on{border-color:var(--gold);color:var(--gold)}
 .recwrap{margin:0 0 10px;padding:8px 10px;background:var(--panel);border:1px solid var(--line);border-radius:8px}
 .recex{display:flex;align-items:center;gap:6px;margin:3px 0}
@@ -453,13 +471,16 @@ body.compact .bx{min-height:34px}
     <div class="fld"><label>Font size (pt)</label><input id="pPt" value="12" oninput="renderAll()"></div>
     <div class="fld"><label>Max lines</label><input id="pLines" value="2" oninput="renderAll()"></div>
     <div class="fld"><label>Calibration %</label><input id="pCal" value="100" oninput="renderAll()"></div>
-    <div class="muted" style="max-width:230px">Defaults match the AF Form 1206 specific-accomplishment field (Times New Roman 12pt). Verified against Adobe.</div>
+    <div class="fld"><label>Package type</label><select id="pkgType" onchange="renderAll()"><option value="quarterly">Individual quarterly (4+2)</option><option value="annual">AFMS annual (10)</option><option value="team">Team (6 + TEAM MEMBERS)</option><option value="volunteer">Volunteer (4, no headings)</option></select></div>
+    <div class="fld"><label title="Width actually used for wrapping. Measured truth from real Acrobat renders is 568.4-569.4pt; 566.0 is the safe build target.">Usable width (pt)</label><input id="pWpt" value="566.0" oninput="renderAll()"></div>
+    <div class="muted" style="max-width:230px">Defaults match the DAF Form 1206 (20240313) SPECIFIC ACCOMPLISHMENTS field &mdash; 202.321&nbsp;mm, Times New Roman 12pt. Usable width was measured against real Acrobat renders at 568.4&ndash;569.4pt; we build at <b>566.0pt</b> for margin. Wrapping is measured by glyph width, never by character count.</div>
    </div>
    <textarea class="pastebox" id="paste" placeholder="Paste a full package or a block of bullets here — they auto-split into separate statements. Or hit + Statement above."></textarea>
    <div style="margin:-6px 0 14px"><button class="btn gold sm" onclick="ingestPaste()">Split &amp; load pasted bullets</button>
     <span class="muted" style="margin-left:8px">Headers, eligibility quotes &amp; wrapped lines handled automatically.</span></div>
    <div style="margin:0 0 12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" onclick="copyAllBullets()">Copy all</button><button class="btn sm" onclick="copyMD()">Copy MD</button><button class="btn sm" onclick="exportTxt()">.txt</button><button class="btn sm" onclick="exportCSV()">.csv</button><button class="btn sm" onclick="exportMD()">.md</button><button class="btn sm" onclick="printPkg()">Print</button><button class="btn sm" onclick="document.getElementById('impTxt').click()">Import .txt</button><button class="btn sm" onclick="autoCleanAll()">Auto-clean all</button><button class="btn sm" onclick="togglePreviews()">Previews</button><button class="btn sm" onclick="toggleDensity()">Density</button><button class="btn sm danger" onclick="clearAll()" style="margin-left:auto">Clear all</button></div>
    <div id="pkgbar"></div>
+   <div id="qcbar"></div>
    <div id="bullets"></div>
   </section>
   <aside class="side">
@@ -490,6 +511,30 @@ body.compact .bx{min-height:34px}
  <section id="mode-valuator" class="modepanel" style="display:none"></section>
  <section id="mode-rules" class="modepanel" style="display:none"></section>
  <section id="mode-reference" class="modepanel" style="display:none"></section>
+</div>
+<footer id="bfFooter">
+ <div class="bf-note">Bullet Forge runs entirely in your browser. Nothing you type leaves this page unless you use the synonym popup or explicitly submit feedback.</div>
+ <div class="bf-row">
+  <span class="bf-ver">Bullet Forge <b id="bfVer">v9.32</b></span>
+  <span class="bf-sep">&middot;</span>
+  <span class="bf-uses">Built with: plain ES5 JavaScript, no frameworks, no build step, no analytics &middot; a Times New Roman AFM glyph-width table for PDF-accurate line measurement &middot; U+2006 six-per-em spacing for 1206 line fit &middot; browser <code>localStorage</code> for autosave &middot; Clipboard and Blob APIs for copy, export and print &middot; the public Datamuse word API for the optional synonym popup</span>
+  <span class="bf-sep">&middot;</span>
+  <button class="bf-link" type="button" onclick="openFeedback()">Submit feedback</button>
+  <span class="bf-sep">&middot;</span>
+  <span class="bf-maint">Maintained by <b>Jeff Ally</b></span>
+ </div>
+</footer>
+<div id="fbModal" style="display:none">
+ <div class="fbbox">
+  <h3>Submit feedback</h3>
+  <div class="muted" id="fbPosture"></div>
+  <textarea id="fbMsg" placeholder="What is wrong, missing, or confusing? Steps to reproduce help."></textarea>
+  <div class="muted">Only what you type here is sent, plus the app version. No statement you have written is ever included.</div>
+  <div class="fbrow">
+   <button class="btn gold sm" onclick="sendFeedback()" id="fbSend">Copy for email</button>
+   <button class="btn sm" onclick="closeFeedback()">Close</button>
+  </div>
+ </div>
 </div>
 <div id="thes"></div>
 
@@ -3402,43 +3447,102 @@ window.DECO={"templates": {"AAM": {"name": "Air & Space Achievement Medal", "ope
 </script>
 <script>
 /* ============ measurement engine (verified, Adobe-matched) ============ */
-var WIDTHS={" ":250,"!":333,"\"":408,"#":500,"$":500,"%":833,"&":778,"'":180,"(":333,")":333,"*":500,"+":564,",":250,"-":333,".":250,"/":278,"0":500,"1":500,"2":500,"3":500,"4":500,"5":500,"6":500,"7":500,"8":500,"9":500,":":278,";":278,"<":564,"=":564,">":564,"?":444,"@":921,"A":722,"B":667,"C":667,"D":722,"E":611,"F":556,"G":722,"H":722,"I":333,"J":389,"K":722,"L":611,"M":889,"N":722,"O":722,"P":556,"Q":722,"R":667,"S":556,"T":611,"U":722,"V":722,"W":944,"X":722,"Y":722,"Z":611,"[":333,"\\":278,"]":333,"^":469,"_":500,"`":333,"a":444,"b":500,"c":444,"d":500,"e":444,"f":333,"g":500,"h":500,"i":278,"j":278,"k":500,"l":278,"m":778,"n":500,"o":500,"p":500,"q":500,"r":333,"s":389,"t":278,"u":500,"v":500,"w":722,"x":500,"y":500,"z":444,"{":480,"|":200,"}":480,"~":541,"\u2019":333,"\u2018":333,"\u201c":444,"\u201d":444,"\u2013":500,"\u2014":1000,"\u00a0":250,"\u2000":500,"\u2001":1000,"\u2002":500,"\u2003":1000,"\u2004":333,"\u2005":250,"\u2006":167,"\u2007":500,"\u2008":250,"\u2009":200,"\u200a":100,"\u200b":0,"\u202f":200,"\u205f":222,"\u3000":1000,"\u2011":333,"\u2212":564};
+var WIDTHS={" ":250,"!":333,"\"":408,"#":500,"$":500,"%":833,"&":778,"'":180,"(":333,")":333,"*":500,"+":564,",":250,"-":333,".":250,"/":278,"0":500,"1":500,"2":500,"3":500,"4":500,"5":500,"6":500,"7":500,"8":500,"9":500,":":278,";":278,"<":564,"=":564,">":564,"?":444,"@":921,"A":722,"B":667,"C":667,"D":722,"E":611,"F":556,"G":722,"H":722,"I":333,"J":389,"K":722,"L":611,"M":889,"N":722,"O":722,"P":556,"Q":722,"R":667,"S":556,"T":611,"U":722,"V":722,"W":944,"X":722,"Y":722,"Z":611,"[":333,"\\":278,"]":333,"^":469,"_":500,"`":333,"a":444,"b":500,"c":444,"d":500,"e":444,"f":333,"g":500,"h":500,"i":278,"j":278,"k":500,"l":278,"m":778,"n":500,"o":500,"p":500,"q":500,"r":333,"s":389,"t":278,"u":500,"v":500,"w":722,"x":500,"y":500,"z":444,"{":480,"|":200,"}":480,"~":541,"\u2019":333,"\u2018":333,"\u201c":444,"\u201d":444,"\u2013":500,"\u2014":1000,"\u00a0":250,"\u2000":500,"\u2001":1000,"\u2002":500,"\u2003":1000,"\u2004":333,"\u2005":250,"\u2006":166.66666666666666,"\u2007":500,"\u2008":250,"\u2009":200,"\u200a":100,"\u200b":0,"\u202f":200,"\u205f":222,"\u3000":1000,"\u2011":333,"\u2212":564};
 function charW(c){ var w=WIDTHS[c]; return (w===undefined)?500:w; }
-/* v9.31 Auto-Space, modelled on the AF Bullet Shaping Tool (af-vcd.github.io/pdf-bullets).
-   The 1206 field is width-limited, not character-limited, so the lever is the space itself:
-     U+2006 six-per-em  (167/1000 em) shrinks a line that spills
-     U+2004 three-per-em (333/1000 em) pads a last line that ends short
-   Only as many gaps change as the fit needs, and the stored text is never touched, so grading,
-   verb detection, the thesaurus and the linter all keep reading clean ASCII. */
-var PACK_NARROW=" ", PACK_WIDE=" ";
-function nsp(s){ return (s||"").replace(/[  -   ]/g," "); }
+/* ============================================================================
+   v9.32 LINE-FIT ENGINE  -- reverse-engineered from real Acrobat renders of
+   DAF Form 1206 (20240313). These numbers are measured fact, not estimates.
+   ----------------------------------------------------------------------------
+   GEOMETRY
+     * SPECIFIC ACCOMPLISHMENTS field = 202.321 mm wide, Times New Roman 12 pt.
+     * True usable width measured against real Acrobat output = 568.4-569.4 pt.
+     * We BUILD and MEASURE at FIT_USABLE_PT = 566.0 pt, a deliberate safety
+       margin below the measured truth. Editable in Settings -> "Usable width (pt)".
+     * Never use character counts to predict fit. Character count does not
+       predict wrapping in a proportional font.
+
+   THE SPACE LEVER
+     * Normal space U+0020 = 250/1000 em = exactly 3.000 pt at 12 pt.
+     * SIX-PER-EM SPACE U+2006 = 1000/6 per mille = exactly 2.000 pt at 12 pt.
+     * So swapping one normal space for one U+2006 saves exactly 1.000 pt.
+       This is the owner's authorised trick to fit more content per line.
+
+   TWO-PASS FIT (the sequence proven to work)
+     PASS 1 - COMPRESS: if the statement spills past the max line count, swap
+       every normal space for U+2006 so the wrap point moves up.
+     PASS 2 - POLISH: walk the U+2006 gaps left to right and widen each one back
+       to a normal space whenever the line it sits on still has slack. This
+       pushes each line out to the right margin WITHOUT moving the wrap point.
+       Guarded: a candidate is accepted only if (a) the line count is unchanged,
+       (b) the wrap signature -- the exact word sequence of every line -- is
+       unchanged, and (c) no line exceeds the usable width. Otherwise reverted.
+
+   AUTHORING ORDER for the writer (two-pass authoring, mirrors the engine):
+     1. Draft the statement minified: short abbreviations, "&" never "and".
+     2. EXPAND abbreviations until line 2 fills out.
+     3. The polish pass takes up the last point or two of slack.
+
+   TARGET: every statement renders on exactly 2 lines, with 0-5 characters of
+   unused space at the end of the last line.
+
+   The stored text is never touched -- grading, verb detection, the thesaurus and
+   the linter all keep reading clean ASCII. Only the preview and Copy output
+   carry the narrow spaces.
+============================================================================ */
+var FIT_USABLE_PT   = 566.0;            /* build/measure width in points (safety margin) */
+var FIT_TRUE_RANGE  = [568.4, 569.4];   /* measured truth from Acrobat; reference only */
+var FIT_TARGET_SLACK= 5;                /* allowed unused characters at end of last line */
+var NARROW = " ";                  /* SIX-PER-EM SPACE  - 2.000 pt @ 12 pt */
+var WIDE   = " ";                  /* normal space      - 3.000 pt @ 12 pt */
+var PACK_NARROW = NARROW;               /* legacy alias */
+function nsp(s){ return (s||"").replace(/[   -   　]/g," "); }
 function packOn(){ var el=document.getElementById("packChk"); return !!(el&&el.checked); }
-function _swapNth(t,ch,n){ var i=0; return t.replace(/ /g,function(m){ return (i++<n)?ch:m; }); }
 function _spaces(t){ return (t.match(/ /g)||[]).length; }
+function _allNarrow(t){ return t.replace(/ /g,NARROW); }
+/* wrap signature: the word sequence of every line, space-normalised. Identical
+   signature == identical wrap points, which is what the polish pass must preserve. */
+function _sig(lines){ return lines.map(function(l){ return l.replace(/[  ]+/g," ").trim(); }).join("\u0001"); }
+function _widestPt(lines){ var m=0; for(var i=0;i<lines.length;i++){ var w=textW(lines[i]); if(w>m)m=w; } return m; }
+/* PASS 2. Widen narrow gaps back to normal spaces, consuming only the slack of
+   the line each gap lives on. Any candidate that moves a wrap point or pushes a
+   line past the usable width is discarded. */
+function polishSpaces(t){
+  if(t.indexOf(NARROW)<0) return {t:t,n:0};
+  var W=effWidthPt(), base=wrap(t), sig=_sig(base), n=base.length, out=t, applied=0;
+  for(var i=0;i<out.length;i++){
+    if(out.charAt(i)!==NARROW) continue;
+    var cand=out.substring(0,i)+WIDE+out.substring(i+1);
+    var cl=wrap(cand);
+    if(cl.length!==n) continue;          /* line count changed -> revert */
+    if(_sig(cl)!==sig) continue;         /* wrap point moved   -> revert */
+    if(_widestPt(cl)>W) continue;        /* over the margin    -> revert */
+    out=cand; applied++;
+  }
+  return {t:out,n:applied};
+}
 function autoSpace(raw){
   var t=nsp(raw||"");
-  if(!t.trim()) return {t:t,ok:true,mode:"none",n:0};
-  var max=getMaxLines(), W=effWidthPt(), sp=_spaces(t), lines=wrap(t);
-  if(lines.length>max){
-    for(var n=1;n<=sp;n++){
-      var c=_swapNth(t,PACK_NARROW,n);
-      if(wrap(c).length<=max) return {t:c,ok:true,mode:"packed",n:n};
-    }
-    return {t:_swapNth(t,PACK_NARROW,sp),ok:false,mode:"over",n:sp};
-  }
-  if(lines.length===max && textW(lines[lines.length-1]||"")/W < 0.96){
-    var best=t,bn=0;
-    for(var w=1;w<=sp;w++){
-      var cw=_swapNth(t,PACK_WIDE,w), Lw=wrap(cw);
-      if(Lw.length>max) break;
-      var f=textW(Lw[Lw.length-1]||"")/W;
-      if(f>1) break;
-      best=cw; bn=w;
-      if(f>=0.96) break;
-    }
-    if(bn) return {t:best,ok:true,mode:"padded",n:bn};
-  }
-  return {t:t,ok:true,mode:"fit",n:0};
+  if(!t.trim()) return {t:t,ok:true,mode:"none",n:0,wide:0};
+  var max=getMaxLines(), lines=wrap(t);
+  if(lines.length<=max) return {t:t,ok:true,mode:"fit",n:0,wide:0};
+  var comp=_allNarrow(t);
+  if(wrap(comp).length>max) return {t:comp,ok:false,mode:"over",n:_spaces(t),wide:0};
+  var p=polishSpaces(comp);
+  return {t:p.t,ok:true,mode:"packed",n:_spaces(t)-p.n,wide:p.n};
+}
+/* Per-line fit report. rows[i].ch is the approximate number of characters that
+   would still fit at the end of line i, using this statement's own average glyph
+   width. Last row should land in 0-FIT_TARGET_SLACK. */
+function fitReport(raw){
+  var a=autoSpace(raw), out=a.t, lines=wrap(out), W=effWidthPt();
+  var bare=out.replace(/[  ]/g,"");
+  var avg=bare.length? (textW(bare)/bare.length) : 6;
+  var rows=lines.map(function(l){
+    var slack=W-textW(l);
+    return {pt:Math.round(slack*10)/10, ch:Math.max(0,Math.floor(slack/(avg||6)))};
+  });
+  return {out:out,lines:lines,rows:rows,mode:a.mode,ok:a.ok,narrow:a.n,widened:a.wide,
+          max:getMaxLines(),over:lines.length>getMaxLines()};
 }
 function outText(s){ return packOn()? autoSpace(s).t : nsp(s); }
 function $(id){ return document.getElementById(id); }
@@ -3446,8 +3550,11 @@ function getW(){ return parseFloat($("pW").value)||202.321; }
 function getFontPt(){ return parseFloat($("pPt").value)||12; }
 function getMaxLines(){ return parseInt($("pLines").value)||2; }
 function getCal(){ return (parseFloat($("pCal").value)||100)/100; }
-function fieldWidthPt(){ return getW()/25.4*72; }
-function effWidthPt(){ return fieldWidthPt()*getCal(); }
+function fieldWidthPt(){ return getW()/25.4*72; }   /* nominal form geometry: 202.321mm = 573.6pt */
+/* Measurement width actually used for wrapping. Configurable; falls back to the
+   proven 566.0 pt build target if the field is missing or invalid. */
+function usableWidthPt(){ var el=$("pWpt"); var v=el?parseFloat(el.value):NaN; return (isFinite(v)&&v>0)?v:FIT_USABLE_PT; }
+function effWidthPt(){ return usableWidthPt()*getCal(); }
 function textW(s){ var t=0,fp=getFontPt(); for(var i=0;i<s.length;i++){ t+=charW(s[i]); } return t/1000*fp; }
 function wrap(text){
   var maxW=effWidthPt(); var lines=[];
@@ -3595,7 +3702,7 @@ function hasRecognition(text){ text=nsp(text);
   return VOCAB.recognitionCues.some(function(c){return new RegExp("\\b"+c.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"i").test(text);});
 }
 function numCount(text){ text=nsp(text); var re=/\$?\d[\d.,]*\s?(?:K|M|B|%|hrs?|hours?|days?|\+)?(?![A-Za-z])/gi,m,n=0; while((m=re.exec(text))){ var idx=m.index; if(idx===0||!/[A-Za-z0-9]/.test(text.charAt(idx-1))){ n++; if(re.lastIndex===idx)re.lastIndex++; } else { re.lastIndex=idx+1; } } return n; }
-function lint(text){ text=nsp(text);
+function lint(text,ctx){ text=nsp(text);
   var f=[]; var cust=customSet();
   if(/[()]/.test(text)) f.push({t:"err",m:"Parentheses not allowed",x:"Remove and rephrase."});
   if(/\u2014|--/.test(text)) f.push({t:"warn",m:"Em-dash / double-dash",x:"About 1 in 5 winning statements use one, but a comma or semicolon reads cleaner in the 1206 box and never renders wrong."});
@@ -3608,7 +3715,140 @@ function lint(text){ text=nsp(text);
   if(unk.length) f.push({t:"warn",m:"Unverified acronym: "+unk.join(", "),x:"Spell out on first use or add to your approved list."});
   var tr=text.trim(); if(tr && !/[.!]$/.test(tr)) f.push({t:"warn",m:"No end punctuation",x:"End with a period."});
   if(/\b(?:was|were)\s+(?:responsible|tasked|utilized|used|involved|assigned|required|completed|performed|conducted|managed|charged|placed|given)\b/i.test(text)) f.push({t:"warn",m:"Passive / weak construction",x:"Lead with an action verb (e.g. 'spearheaded', 'drove')."});
+  f=f.concat(lintHard(text,ctx));
   return f;
+}
+
+/* ============================================================================
+   v9.32 HARD WRITING RULES  (the owner's non-negotiables for a 1206 package)
+   Statement-level checks run per card; package-level checks run in the QC bar.
+   Nothing here rewrites the user's text -- it only flags.
+============================================================================ */
+var HARD_RULES=[
+  ["Ampersand","& is always used. Never “and”, and never both in the same statement."],
+  ["Banned tokens","w/  w/o  incl  approx  Qtrly  INDOPACOM (renamed PACOM 16 Jun 2026). ALS is fine as a course name in a list, never as a capability claim (“ALS coverage”, “ALS response”)."],
+  ["Banned symbols","No + > < exclamation points or colons inside a statement."],
+  ["Acronyms stay acronyms","MTF, PACAF, DAF, TCCC and the like are never spelled out. Only ordinary words (hrs, Sq, Wg, Gp, Flt, Amn, pers) may be expanded to fill a line."],
+  ["One resolution per package","An abbreviation must resolve the same way in every statement of the package."],
+  ["No unit number on MDG/MTF","Write MDG or MTF bare. Never “374 MDG”."],
+  ["Name the member","Every statement names or refers to the member — rank+surname, first name, or pronoun — and no two adjacent statements open the same way."],
+  ["Three hard numbers","Target 3 or more hard numbers per statement."],
+  ["No repetition","No repeated distinctive word inside a statement, and no repeated metric across the package."],
+  ["Earned superlatives only","No self-asserted superlative without a conferring verb: won, awarded, named, selected, earned, recognized."],
+  ["Structure","Individual quarterly: 4 statements under JOB PERFORMANCE IN PRIMARY DUTY + 2 under WHOLE AIRMAN CONCEPT. AFMS annual: 10 statements under one LEADERSHIP AND JOB PERFORMANCE heading. Team: one section, 6 statements + TEAM MEMBERS. Volunteer: 4 statements, no headings. Headings are full caps."]
+];
+var PKG_STRUCTURE={
+  "quarterly":{label:"Individual quarterly",total:6,
+    sections:[{h:"JOB PERFORMANCE IN PRIMARY DUTY",n:4},{h:"WHOLE AIRMAN CONCEPT",n:2}]},
+  "annual":{label:"AFMS annual",total:10,
+    sections:[{h:"LEADERSHIP AND JOB PERFORMANCE",n:10}]},
+  "team":{label:"Team",total:6,
+    sections:[{h:"(single section)",n:6}],extra:"TEAM MEMBERS block required"},
+  "volunteer":{label:"Volunteer",total:4,
+    sections:[{h:"(no headings)",n:4}]}
+};
+function pkgType(){ var el=$("pkgType"); return el? el.value : "quarterly"; }
+/* acronyms that must never appear spelled out */
+var LOCKED_ACR=[
+  [/\bmedical treatment facilit(?:y|ies)\b/i,"MTF"],
+  [/\bpacific air forces\b/i,"PACAF"],
+  [/\bdepartment of the air force\b/i,"DAF"],
+  [/\btactical combat casualty care\b/i,"TCCC"],
+  [/\bmedical group\b/i,"MDG"],
+  [/\bair force medical service\b/i,"AFMS"]
+];
+/* ordinary-word pairs: a package must pick one form and keep it */
+var ABBR_PAIRS=[["hrs","hours"],["Sq","Squadron"],["Wg","Wing"],["Gp","Group"],["Flt","Flight"],
+  ["Amn","Airmen"],["pers","personnel"],["mbr","member"],["mgmt","management"],["msn","mission"]];
+var CONFER=/\b(?:won|awarded|award|named|selected|earned|recognized|recognised|chosen|chose|honored|honoured|presented)\b/i;
+var SUPERL=/\b(?:best|premier|superior|unmatched|unparalleled|unrivaled|elite|finest|strongest|flawless|world[- ]class|number one|#1|top(?:-|\s)?(?:performer|tier|notch))\b/i;
+var MEMBER_REF_RANK=/\[MEMBER\]|\b(?:AB|Amn|A1C|SrA|SSgt|TSgt|MSgt|SMSgt|CMSgt|CCM|CMSAF|2d?Lt|1st?Lt|Lt|Capt|Maj|LtCol|Col|Gen|Mr|Mrs|Ms|Dr)\b\.?\s*[A-Z]/;
+var MEMBER_REF_WORD=/\bmembers?\b|\b(?:he|she|they|his|her|hers|him|them|their|himself|herself|themselves)\b/i;
+function hasMemberRef(t){ return MEMBER_REF_RANK.test(t)||MEMBER_REF_WORD.test(t); }
+function openSig(t){ var w=nsp(t||"").replace(/^[\s\-•*]+/,"").split(/\s+/); return (w[0]||"").toLowerCase()+" "+(w[1]||"").toLowerCase(); }
+function metricSet(t){ var out={}; (nsp(t).match(/\$?\d[\d,]*(?:\.\d+)?\s?[%KMkm]?/g)||[]).forEach(function(m){ var k=m.replace(/\s+/g,"").toLowerCase(); if(k.replace(/[^\d]/g,"").length>=2) out[k]=1; }); return out; }
+/* statement-level hard-rule flags. ctx = {i:index, all:state.bullets} (optional). */
+function lintHard(text,ctx){
+  var f=[], t=nsp(text||""); if(!t.trim()) return f;
+  var hasAmp=/&/.test(t), hasAnd=/\band\b/i.test(t);
+  if(hasAmp&&hasAnd) f.push({t:"err",m:"Mixes & and “and”",x:"Pick one — and it is always &."});
+  else if(hasAnd) f.push({t:"err",m:"“and” used",x:"& is always used in place of “and”."});
+  var banned=[];
+  if(/\bw\/o\b|\bw\/o/.test(t)) banned.push("w/o");
+  if(/\bw\//.test(t)) banned.push("w/");
+  if(/\bincl\b\.?/i.test(t)) banned.push("incl");
+  if(/\bapprox\b\.?/i.test(t)) banned.push("approx");
+  if(/\bQtrly\b/i.test(t)) banned.push("Qtrly");
+  if(/\bINDOPACOM\b/.test(t)) banned.push("INDOPACOM (renamed PACOM 16 Jun 2026)");
+  if(banned.length) f.push({t:"err",m:"Banned token: "+banned.join(", "),x:"Remove and rephrase. These never appear in a finished package."});
+  if(/\bALS\s+(?:coverage|response|capability|support|standby|cert|certified|qualified)\b/i.test(t))
+    f.push({t:"err",m:"ALS used as a capability claim",x:"ALS is acceptable only as a course name in a list, never as a capability (“ALS coverage”, “ALS response”)."});
+  var sym=[]; if(/\+/.test(t))sym.push("+"); if(/>/.test(t))sym.push(">"); if(/</.test(t))sym.push("<");
+  if(/!/.test(t))sym.push("exclamation point"); if(/:/.test(t))sym.push("colon");
+  if(sym.length) f.push({t:"err",m:"Not allowed inside a statement: "+sym.join(" "),x:"Write the relationship in words."});
+  var spelled=[]; LOCKED_ACR.forEach(function(p){ if(p[0].test(t)) spelled.push(p[1]); });
+  if(spelled.length) f.push({t:"err",m:"Spelled-out acronym: use "+spelled.join(", "),x:"Acronyms stay acronyms. Only ordinary words (hrs, Sq, Wg, Gp, Flt, Amn, pers) may be expanded to fill a line."});
+  if(/\b\d{1,4}(?:st|nd|rd|th)?\s+(?:MDG|MTF)\b/.test(t))
+    f.push({t:"err",m:"Unit number in front of MDG/MTF",x:"Write MDG or MTF bare — never “374 MDG”."});
+  if(!hasMemberRef(t)) f.push({t:"err",m:"Member not named",x:"Every statement must name or refer to the member — rank+surname, first name, or a pronoun."});
+  var nn=(typeof numCount==="function")? numCount(t) : 0;
+  if(nn<3) f.push({t:"warn",m:"Only "+nn+" hard number"+(nn==1?"":"s"),x:"Target 3 or more per statement."});
+  var seen={},dup=[]; (t.toLowerCase().match(/[a-z][a-z'\-]{4,}/g)||[]).forEach(function(w){ if(STOP[w])return; seen[w]=(seen[w]||0)+1; if(seen[w]===2)dup.push(w); });
+  if(dup.length) f.push({t:"warn",m:"Repeated word: "+dup.join(", "),x:"No distinctive word twice in one statement."});
+  if(SUPERL.test(t)&&!CONFER.test(t))
+    f.push({t:"err",m:"Self-asserted superlative",x:"A superlative needs a conferring verb — won, awarded, named, selected, earned, recognized."});
+  if(ctx&&ctx.all&&ctx.i>0){
+    var prev=ctx.all[ctx.i-1];
+    if(prev&&prev.text&&prev.text.trim()&&openSig(prev.text)===openSig(t))
+      f.push({t:"err",m:"Opens the same way as statement "+ctx.i,x:"Rotate how the member is referred to — rank+surname, first name, pronoun."});
+  }
+  return f;
+}
+/* package-level QC bar */
+function pkgQC(){
+  var bs=state.bullets.filter(function(b){return b.text&&b.text.trim();});
+  var out=[];
+  var st=PKG_STRUCTURE[pkgType()];
+  if(st){
+    if(bs.length!==st.total) out.push({t:"err",m:st.label+" needs exactly "+st.total+" statements",x:"You have "+bs.length+". "+st.sections.map(function(s){return s.h+" — "+s.n;}).join("; ")+(st.extra?". "+st.extra:"")+". Headings in full caps."});
+    else out.push({t:"ok",m:st.label+" structure: "+st.total+" statements ✓",x:st.sections.map(function(s){return s.h+" — "+s.n;}).join("; ")+(st.extra?". "+st.extra:"")});
+  }
+  /* one resolution per abbreviation across the package */
+  var joined=bs.map(function(b){return nsp(b.text);}).join(" \u0001 ");
+  var clash=[];
+  ABBR_PAIRS.forEach(function(p){
+    var a=new RegExp("\\b"+p[0]+"\\b"), b=new RegExp("\\b"+p[1]+"\\b","i");
+    if(a.test(joined)&&b.test(joined)) clash.push(p[0]+" / "+p[1]);
+  });
+  if(clash.length) out.push({t:"err",m:"Abbreviation resolves two ways: "+clash.join(", "),x:"Pick one form and use it in every statement of the package."});
+  /* repeated metric across statements */
+  var mseen={}, mdup={};
+  bs.forEach(function(b,i){ var ms=metricSet(b.text); Object.keys(ms).forEach(function(k){ if(mseen[k]!=null&&mseen[k]!==i) mdup[k]=1; else mseen[k]=i; }); });
+  var md=Object.keys(mdup);
+  if(md.length) out.push({t:"err",m:"Metric repeated across statements: "+md.join(", "),x:"Each statement must carry its own numbers."});
+  /* adjacent openings */
+  for(var i=1;i<bs.length;i++){ if(openSig(bs[i].text)===openSig(bs[i-1].text)){ out.push({t:"err",m:"Statements "+i+" and "+(i+1)+" open identically",x:"Rotate the member reference."}); break; } }
+  /* fit roll-up */
+  var bad=0, shortL=0;
+  bs.forEach(function(b){ var r=fitReport(b.text); if(r.over)bad++; else if(r.lines.length===r.max && r.rows[r.rows.length-1].ch>FIT_TARGET_SLACK) shortL++; });
+  if(bad) out.push({t:"err",m:bad+" statement"+(bad==1?"":"s")+" run past "+getMaxLines()+" lines",x:"Minify, then re-expand only what the last line can hold."});
+  if(shortL) out.push({t:"warn",m:shortL+" statement"+(shortL==1?"":"s")+" leave more than "+FIT_TARGET_SLACK+" characters short on the last line",x:"Expand an ordinary-word abbreviation to fill it."});
+  if(!bad&&!shortL&&bs.length) out.push({t:"ok",m:"Every statement fits in "+getMaxLines()+" lines within 0–"+FIT_TARGET_SLACK+" characters ✓",x:"Measured at "+usableWidthPt().toFixed(1)+"pt usable width."});
+  return out;
+}
+function renderQC(){
+  var el=$("qcbar"); if(!el) return;
+  var q=pkgQC();
+  if(!q.length){ el.innerHTML=""; return; }
+  el.innerHTML='<div class="qchead">Package QC — hard rules</div>'+
+    q.map(function(x){ return '<div class="flag '+x.t+'"><b>'+x.m+'</b> '+x.x+'</div>'; }).join("");
+}
+function hardRulesHTML(){
+  var h='<div class="ruleg"><h4>Hard writing rules (v9.32)</h4><div class="muted">These are checked on every statement and across the package. They are not preferences.</div><table class="tablish" style="margin-top:8px"><tr><th>Rule</th><th>What it means</th></tr>';
+  HARD_RULES.forEach(function(r){ h+='<tr><td style="color:var(--gold);font-weight:700;white-space:nowrap">'+escHtml(r[0])+'</td><td>'+escHtml(r[1])+'</td></tr>'; });
+  h+='</table>';
+  h+='<div class="muted" style="margin-top:10px"><b>Line fit.</b> The SPECIFIC ACCOMPLISHMENTS field on DAF Form 1206 (20240313) is 202.321 mm wide in Times New Roman 12pt. Usable width measured against real Acrobat renders is 568.4–569.4pt; Bullet Forge builds and measures at 566.0pt for margin. A normal space is exactly 3.000pt; U+2006 six-per-em is exactly 2.000pt, so each swap buys exactly 1.000pt. Statements are compressed with U+2006 and then polished — gaps widened back per line using only that line\u0027s own slack — so each line reaches the right margin without moving the wrap point. Character counts are never used to predict wrapping.</div></div>';
+  return h;
 }
 
 /* ============ repetition ============ */
@@ -3685,7 +3925,7 @@ function renderAll(){
   if(!state.bullets.length){
     host.innerHTML='<div class="empty"><b>No statements yet.</b><br>Paste a package above or click <b>+ Statement</b>. '+
       'Pull a proven line from the <b>Examples</b> tab to start.</div>';
-    renderScore(); save(); return;
+    renderScore(); try{renderQC();}catch(e){} save(); return;
   }
   var _verbCounts={}; state.bullets.forEach(function(bb){var vv=(openingVerb(bb.text)||"").toLowerCase(); if(vv)_verbCounts[vv]=(_verbCounts[vv]||0)+1;});
   state.bullets.forEach(function(b,i){
@@ -3700,7 +3940,7 @@ function renderAll(){
       '<span class="tag num">'+nums+' #</span>'+
       (rec?'<span class="tag ok">✓ recognition</span>':'<span class="tag no">no recognition</span>')+
       '<span class="tag '+(over?'no':'ok')+'">'+lines.length+'/'+getMaxLines()+' lines</span>';
-    var flags=lint(b.text);
+    var flags=lint(b.text,{i:i,all:state.bullets});
     var weak=findWeak(b.text);
     var flagHTML=flags.map(function(f){return '<div class="flag '+f.t+'"><b>'+f.m+'</b> '+f.x+'</div>';}).join("");
     if(weak.length){
@@ -3715,24 +3955,27 @@ function renderAll(){
     var scopeHTML='<div class="scopebar">'+scopes.map(function(s){return '<div class="s'+(s.on?' on':'')+'" title="'+s.tier+'"></div>';}).join("")+
       '<small>'+(onCount?('reaches '+topTier+(onCount>=2?' · '+onCount+' tiers':'')):'add scope')+'</small></div>';
     var w=textW(lines[lines.length-1]||""); var lastFrac=Math.round(w/effWidthPt()*100);
-    var _saved = _as.mode==="packed" ? (" \u00b7 auto-spaced, "+_as.n+" gap"+(_as.n!=1?"s":"")+" tightened")
-              : _as.mode==="padded" ? (" \u00b7 auto-spaced, "+_as.n+" gap"+(_as.n!=1?"s":"")+" padded to fill")
+    var _saved = _as.mode==="packed" ? (" \u00b7 auto-spaced, "+_as.n+" six-per-em gap"+(_as.n!=1?"s":"")+(_as.wide?", "+_as.wide+" widened back in the polish pass":""))
               : _as.mode==="over"   ? " \u00b7 spacing cannot save it"
               : "";
+    /* v9.32 per-line fit readout: leftover characters on every line. */
+    var _fit=fitReport(b.text);
+    var _leftTxt=_fit.rows.map(function(r,ri){ return "L"+(ri+1)+" "+r.ch+" ch"; }).join(" \u00b7 ");
+    var _lastCh=_fit.rows.length? _fit.rows[_fit.rows.length-1].ch : 0;
     var fillW=Math.min(100,Math.round((lines.length-1)*100/getMaxLines()+ (w/effWidthPt())*100/getMaxLines()));
     var _avgCh=0; var _bare=nsp(b.text).replace(/ /g,""); if(_bare.length)_avgCh=textW(_bare)/_bare.length;
-    var _gainCh=_avgCh? Math.round(spaceGain(b.text,pkSpaceMode())/_avgCh) : 0;
     if(_as.mode==="over"){ flagHTML+='<div class="flag err"><b>Auto-Space cannot fix this</b> Even with every gap at six-per-em it still runs past '+getMaxLines()+' line(s). Cut a word or abbreviate.</div>'; }
     var atMax=(lines.length===getMaxLines()); var gap=100-lastFrac;
-    if(atMax && !over && lastFrac<96){ flagHTML+='<div class="flag err"><b>Line-'+getMaxLines()+' gap '+gap+'%</b> Trailing white space too large. Add ~'+Math.max(1,Math.ceil((96-lastFrac)/4))+' more word(s) or a qualifier so the last line fills \u226596%.</div>'; }
+    if(over){ flagHTML+='<div class="flag err"><b>Runs to '+lines.length+' lines \u2014 must be '+getMaxLines()+'</b> Measured at '+usableWidthPt().toFixed(1)+'pt usable width. Minify first (short abbreviations, "&amp;" not "and"), then re-expand only what line '+getMaxLines()+' can hold.</div>'; }
+    if(atMax && !over && _lastCh>FIT_TARGET_SLACK){ flagHTML+='<div class="flag err"><b>Line '+getMaxLines()+' is '+_lastCh+' characters short</b> Target is 0\u2013'+FIT_TARGET_SLACK+' characters of unused space. Expand an abbreviation (hrs, Sq, Wg, Gp, Flt, Amn, pers) or add a qualifier \u2014 do not add a filler word.</div>'; }
     var _vk=(v||"").toLowerCase();
     if(_vk && _verbCounts[_vk]>1){ flagHTML+='<div class="flag err"><b>Duplicate verb \''+v+'\'</b> '+_verbCounts[_vk]+' statements open with this verb. Every statement in a package must use a different opening verb.</div>'; }
-    var mcol=over?'var(--bad)':(atMax&&lastFrac>=96?'var(--good)':'var(--acc)');
+    var mcol=over?'var(--bad)':(atMax&&_lastCh<=FIT_TARGET_SLACK?'var(--good)':'var(--acc)');
     card.innerHTML=
       '<div class="bhead"><div class="bidx">'+(i+1)+'</div><div class="bmeta">'+meta+'</div></div>'+
       '<textarea class="bx" id="ta-'+b.id+'" oninput="onEdit(\''+b.id+'\')" placeholder="Write your statement…">'+escHtml(b.text)+'</textarea>'+
       '<div class="meter"><i style="width:'+Math.max(3,fillW)+'%;background:'+mcol+'"></i></div>'+
-      '<div class="linelbl"><span>'+lines.length+' line'+(lines.length!=1?'s':'')+' · last line '+lastFrac+'% full</span>'+
+      '<div class="linelbl"><span>'+lines.length+'/'+getMaxLines()+' line'+(lines.length!=1?'s':'')+' · leftover '+_leftTxt+_saved+'</span>'+
         '<span>'+b.text.length+' chars'+(over?' · OVER by '+(lines.length-getMaxLines())+' line(s)':'')+'</span></div>'+
       '<div class="preview" id="pv-'+b.id+'">'+renderPreviewHTML(b.text,freq)+'</div>'+
       scopeHTML+
@@ -3746,7 +3989,7 @@ function renderAll(){
         '<button class="btn sm danger" onclick="delBullet(\''+b.id+'\')" style="margin-left:auto">Delete</button></div>';
     host.appendChild(card);
   });
-  renderScore(); save(); growAll();
+  renderScore(); try{renderQC();}catch(e){} save(); growAll();
 }
 function onEdit(id){
   var b=state.bullets.find(function(x){return x.id==id;}); if(!b)return;
@@ -4018,8 +4261,8 @@ function insertVerb(v){
   if(!b.text.trim()){ b.text=v+" "; } else { navigator.clipboard.writeText(v); flashToast(v+" copied"); return; }
   save(); renderAll();
 }
-function persistSettings(){ try{ state.settings={pW:$("pW").value,pPt:$("pPt").value,pLines:$("pLines").value,pCal:$("pCal").value}; }catch(e){} }
-function applySettings(){ try{ var s=state.settings; if(!s)return; if(s.pW!=null)$("pW").value=s.pW; if(s.pPt!=null)$("pPt").value=s.pPt; if(s.pLines!=null)$("pLines").value=s.pLines; if(s.pCal!=null)$("pCal").value=s.pCal; }catch(e){} }
+function persistSettings(){ try{ state.settings={pW:$("pW").value,pPt:$("pPt").value,pLines:$("pLines").value,pCal:$("pCal").value,pWpt:$("pWpt").value,pkgType:$("pkgType")?$("pkgType").value:null}; }catch(e){} }
+function applySettings(){ try{ var s=state.settings; if(!s)return; if(s.pW!=null)$("pW").value=s.pW; if(s.pPt!=null)$("pPt").value=s.pPt; if(s.pLines!=null)$("pLines").value=s.pLines; if(s.pCal!=null)$("pCal").value=s.pCal; if(s.pWpt!=null&&$("pWpt"))$("pWpt").value=s.pWpt; if(s.pkgType&&$("pkgType"))$("pkgType").value=s.pkgType; }catch(e){} }
 function growTA(ta){ if(!ta)return; ta.style.height="auto"; ta.style.height=(ta.scrollHeight+2)+"px"; }
 function growAll(){ try{document.querySelectorAll("textarea.bx").forEach(growTA);}catch(e){} }
 function dupBullet(id){ var idx=state.bullets.findIndex(function(b){return b.id==id;}); if(idx<0)return; state.bullets.splice(idx+1,0,{id:uid(),text:state.bullets[idx].text}); save(); renderAll(); flashToast("Statement duplicated."); }
@@ -5398,6 +5641,7 @@ function renderRules(){
   h+='<div class="wsum" id="wsum">Current total: '+sum+' (normalized to 100)</div>';
   h+='<div class="muted" style="margin-top:8px"><b>Grade bands are anchored to the winning corpus</b>, not to an ideal: ELITE 80+ is the top ~10% of 6,200+ board-level statements, STRONG 65+ the next quarter, COMPETITIVE 50+ the middle third, MODERATE 35+ the bottom quarter, WEAK below 35 is under ~95% of winners. A MODERATE statement is not a bad statement — it is one that a typical winner out-writes.</div>';
   h+='<div style="margin-top:10px"><button class="btn sm" onclick="resetRules()">Reset to board defaults</button></div></div>';
+  h+=hardRulesHTML();
   h+=reviewGuideHTML();
   h+='<div class="ruleg"><h4>Decoration character window</h4><div class="muted">Citation body target range. Current AF guidance ~1320–1330.</div>'+
     '<div class="rrow"><label>Minimum chars</label><input type="number" id="rd-min" value="'+((state.rules.decoWin&&state.rules.decoWin[0])||1320)+'" oninput="saveDecoWin()"></div>'+
@@ -5587,9 +5831,92 @@ function renderReference(){
 
 load(); applySettings(); renderAll(); initEx(); applyTheme((state.ui&&state.ui.theme)||"dark"); setMode((state.ui&&state.ui.mode)||'1206'); try{if(state.ui&&state.ui.tab)setTab(state.ui.tab);}catch(e){} growAll(); initUI(); updateSaveChip(); initShortcuts();
 
+/* ============================================================================
+   v9.32 FEEDBACK CHANNEL  -- READ THIS BEFORE CHANGING ANYTHING HERE
+   ----------------------------------------------------------------------------
+   NETWORK POSTURE (this matters for the DHA / USAF security review)
+     Bullet Forge is a single self-contained HTML file and makes no outbound
+     calls of its own. The feedback channel therefore DEFAULTS TO NO NETWORK:
+     FEEDBACK_RELAY_ON = false means "Submit feedback" formats the message and
+     copies it to the clipboard for the user to paste into an email themselves.
+     Nothing is transmitted, nothing is stored, no third party is contacted.
+
+     If and only if the reviewing authority permits an outbound POST to a
+     third-party form relay, flip FEEDBACK_RELAY_ON to true and put the relay
+     endpoint in FEEDBACK_RELAY_ENDPOINT. That is the whole switch -- one
+     constant, one endpoint, nothing else in the file changes.
+
+   WHY A RELAY AND NOT A mailto: OR A PLAIN ADDRESS
+     The maintainer's address must not appear in the rendered page, in the DOM,
+     or in readable form in this source, so it is never written here at all.
+     Instead the relay provider (FormSubmit.co style) issues a RANDOM ENDPOINT
+     TOKEN that is bound server-side to the maintainer's mailbox. The token is
+     not the address and cannot be reversed into it, so harvesters get nothing.
+     To mint one: register the maintainer mailbox with the relay provider once,
+     confirm the activation email, and paste the random token URL below.
+
+   PRIVACY
+     Only the text the user types in the feedback box plus the app version is
+     ever sent or copied. No statement, no package, no localStorage contents,
+     no browser fingerprint, no identifiers.
+============================================================================ */
+var FEEDBACK_RELAY_ON = false;          /* DEFAULT OFF -> clipboard fallback, zero network */
+var FEEDBACK_RELAY_ENDPOINT = "";       /* e.g. "https://formsubmit.co/ajax/<random-token>" -- token only, never an address */
+
+function feedbackPosture(){
+  return (FEEDBACK_RELAY_ON && FEEDBACK_RELAY_ENDPOINT)
+    ? "Your message will be sent to the maintainer through a form relay. The relay holds the destination address; this page does not."
+    : "Offline mode: nothing is transmitted. Your message is formatted and copied to your clipboard — paste it into an email to the maintainer and send it yourself.";
+}
+function openFeedback(){
+  var m=$("fbModal"); if(!m) return;
+  var p=$("fbPosture"); if(p) p.textContent=feedbackPosture();
+  var b=$("fbSend"); if(b) b.textContent=(FEEDBACK_RELAY_ON&&FEEDBACK_RELAY_ENDPOINT)?"Send":"Copy for email";
+  m.style.display="flex";
+  var t=$("fbMsg"); if(t){ t.value=""; t.focus(); }
+}
+function closeFeedback(){ var m=$("fbModal"); if(m) m.style.display="none"; }
+function _fbPayload(msg){
+  return "Bullet Forge feedback\nVersion: v"+APP_VERSION+"\n\n"+msg.trim()+"\n";
+}
+function sendFeedback(){
+  var t=$("fbMsg"); var msg=t? t.value : "";
+  if(!msg.trim()){ flashToast("Type a message first."); return; }
+  var body=_fbPayload(msg);
+  if(FEEDBACK_RELAY_ON && FEEDBACK_RELAY_ENDPOINT){
+    /* Only reachable when the reviewing authority has approved the relay. */
+    fetch(FEEDBACK_RELAY_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({subject:"Bullet Forge feedback (v"+APP_VERSION+")",message:body})})
+      .then(function(){ closeFeedback(); flashToast("Feedback sent. Thank you."); })
+      .catch(function(){ _fbClipboard(body); });
+    return;
+  }
+  _fbClipboard(body);
+}
+function _fbClipboard(body){
+  var done=function(){ closeFeedback(); flashToast("Copied — paste it into an email to the maintainer."); };
+  try{
+    navigator.clipboard.writeText(body).then(done,function(){ _fbManual(body); });
+  }catch(e){ _fbManual(body); }
+}
+function _fbManual(body){
+  var t=$("fbMsg"); if(t){ t.value=body; t.select(); }
+  flashToast("Press Ctrl+C to copy, then paste it into an email.");
+}
+
 /* ===== Version tracker ===== */
-var APP_VERSION="9.31";
+var APP_VERSION="9.32";
 var CHANGELOG=[
+  {v:"9.32", d:"27 Sep 2026", notes:[
+     "Line-fit engine rebuilt on measured form geometry. The DAF Form 1206 (20240313) SPECIFIC ACCOMPLISHMENTS field is 202.321 mm wide in Times New Roman 12pt; usable width measured against real Acrobat renders is 568.4 to 569.4pt, and Bullet Forge now builds and measures at 566.0pt for margin. The measurement width is editable in Settings. Character counts are never used to predict wrapping.",
+     "U+2006 six-per-em is now measured as exactly 2.000pt at 12pt (it was 2.004pt), against exactly 3.000pt for a normal space, so one swap buys exactly 1.000pt.",
+     "Two-pass fit: compress with U+2006 until the statement lands inside the line limit, then a polish pass widens gaps back to normal spaces line by line, consuming only that line's own slack. Guarded - the candidate is reverted if the line count or any wrap point moves, or if a line would cross the margin. The result is lines that reach the right margin without re-wrapping.",
+     "Each card now reports line count and leftover characters per line, and warns when a statement runs to a third line or leaves more than 5 characters short on the last line.",
+     "New Package QC bar: hard writing rules enforced per statement and across the package - always &, banned tokens (w/, w/o, incl, approx, Qtrly, INDOPACOM, ALS as a capability claim), no + > < ! or colon, acronyms stay acronyms, one resolution per abbreviation per package, no unit number on MDG/MTF, every statement names the member with rotating openings, 3+ hard numbers, no repeated word or repeated metric, and no self-asserted superlative without a conferring verb.",
+     "Package structure check by type: individual quarterly 4+2, AFMS annual 10, team 6 plus TEAM MEMBERS, volunteer 4 with no headings.",
+     "New footer with version, an honest list of what the tool actually uses, and a Submit feedback control. Feedback defaults to a no-network mode that copies the formatted message to the clipboard; an optional form relay can be enabled by flipping one constant.",
+     "Fixed a crash: every statement card called two functions (spaceGain, pkSpaceMode) that no longer existed."
+  ]},
   {v:"9.30", d:"13 Sep 2026", notes:[
      "Synonym popup no longer shows anatomical or vulgar words. The public thesaurus returns those for ordinary military words like member, unit, staff and discharge, and they are now screened out."
   ]},
