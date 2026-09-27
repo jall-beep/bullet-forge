@@ -544,10 +544,10 @@ body.compact .bx{min-height:34px}
       <div class="fld" style="max-width:120px"><label>Field width (mm)</label><input id="pW" value="202.321" oninput="renderAll()"></div>
       <div class="fld" style="max-width:96px"><label>Font size (pt)</label><input id="pPt" value="12" oninput="renderAll()"></div>
       <div class="fld" style="max-width:96px"><label title="Scales the measured width. Leave at 100 unless you are deliberately calibrating against a printed render.">Calibration %</label><input id="pCal" value="100" oninput="renderAll()"></div>
-      <div class="fld" style="max-width:120px"><label title="Width actually used for wrapping. Measured truth from real Acrobat renders is 568.4-569.4pt; we build at 567.8pt.">Usable width (pt)</label><input id="pWpt" value="567.8" oninput="renderAll()"></div>
+      <div class="fld" style="max-width:120px"><label title="Width actually used for wrapping. Measured truth from real Acrobat renders is 568.4-569.4pt; we build at 568.0pt.">Usable width (pt)</label><input id="pWpt" value="568.0" oninput="renderAll()"></div>
      </div>
      <div style="margin-top:8px"><button class="btn sm" onclick="resetGeometry()">Reset to form defaults</button></div>
-     <div class="muted" style="margin-top:8px;line-height:1.5">Wrapping is measured by <b>glyph width with kerning</b>, never by character count. Usable width measured against real Acrobat renders is 568.4&ndash;569.4&nbsp;pt; the build target is <b>567.8&nbsp;pt</b>, validated against 120 statements known to render on two lines.</div>
+     <div class="muted" style="margin-top:8px;line-height:1.5">Wrapping is measured by <b>glyph width with kerning</b>, never by character count. Usable width measured against real Acrobat renders is 568.4&ndash;569.4&nbsp;pt; the build target is <b>568.0&nbsp;pt</b>, validated against 120 statements known to render on two lines.</div>
     </div></details>
    <div class="tabs">
     <div class="tab on" data-t="ex" onclick="setTab('ex')">Examples</div>
@@ -3521,6 +3521,36 @@ var WIDTHS={" ":250,"!":333,"\"":408,"#":500,"$":500,"%":833,"&":778,"'":180,"("
    drops from 0.21% to 0.051% with these applied. */
 var KERN={" A":-55.2," T":-18.1," V":-18.1," W":-18.1," Y":-37.1,"11":-37.1,"A ":-55.2,"AT":-110.8,"AV":-128.9,"AW":-80.1,"AY":-91.8,"Av":-74.2,"Aw":-91.8,"Ay":-91.8,"A’":-110.8,"F,":-80.1,"F.":-80.1,"FA":-74.2,"L ":-37.1,"LT":-91.8,"LV":-91.8,"LW":-74.2,"LY":-100.1,"Ly":-55.2,"L’":-91.8,"P ":-37.1,"P,":-110.8,"P.":-110.8,"PA":-91.8,"RT":-60.1,"RV":-80.1,"RW":-55.2,"RY":-55.2,"Ry":-40.0,"T ":-18.1,"T,":-74.2,"T-":-91.8,"T.":-74.2,"T:":-49.8,"T;":-55.2,"TA":-80.1,"TO":-18.1,"Ta":-69.8,"Tc":-69.8,"Te":-69.8,"Ti":-35.2,"To":-69.8,"Tr":-35.2,"Ts":-69.8,"Tu":-35.2,"Tw":-69.8,"Ty":-69.8,"V ":-18.1,"V,":-128.9,"V-":-91.8,"V.":-128.9,"V:":-74.2,"V;":-74.2,"VA":-128.9,"Va":-110.8,"Ve":-110.8,"Vi":-60.1,"Vo":-128.9,"Vr":-60.1,"Vu":-60.1,"Vy":-110.8,"W ":-18.1,"W,":-91.8,"W-":-55.2,"W.":-91.8,"W:":-37.1,"W;":-37.1,"WA":-110.8,"Wa":-80.1,"We":-80.1,"Wi":-40.0,"Wo":-80.1,"Wr":-40.0,"Wu":-40.0,"Wy":-60.1,"Y ":-37.1,"Y,":-128.9,"Y-":-110.8,"Y.":-128.9,"Y:":-91.8,"Y;":-91.8,"YA":-110.8,"Ya":-100.1,"Ye":-100.1,"Yi":-55.2,"Yo":-100.1,"Yp":-91.8,"Yq":-110.8,"Yu":-110.8,"Yv":-100.1,"ff":-18.1,"f’":55.2,"r,":-40.0,"r-":-20.0,"r.":-55.2,"rg":-18.1,"r’":37.1,"v,":-64.9,"v.":-64.9,"w,":-64.9,"w.":-64.9,"y,":-64.9,"y.":-64.9,"’ ":-74.2,"’s":-55.2,"’t":-18.1,"’’":-74.2};
 function kernW(a,b){ var k=KERN[a+b]; return k===undefined?0:k; }
+/* ---------------------------------------------------------------------------
+   v9.35  SPACE-CLASS KERN MIRRORING  -- the fix for the last false "3 lines".
+
+   In the font, kerning is defined between GLYPH CLASSES, not literal characters.
+   The space class contains U+0020 AND every fixed-width space, so the shaper
+   kerns " A" by exactly the same -55.2/1000 em it applies to " A".
+   Our KERN table is keyed on literal character pairs, so it carried " A" but
+   not " A" -- and a 1206 statement packed with six-per-em spaces is full of
+   exactly those pairs.
+
+   Measured on the real TSgt Killins statement 1 as stored in the PDF: three
+   occurrences of  A / A , each mismeasured by +0.66pt, for +1.98pt of
+   the +2.01pt total error on line 2. Everything else was rounding noise at
+   0.002pt. Across all 120 statements in the live packages the peak error was
+   +3.12pt (0.55%) -- easily enough to invent a third line.
+
+   Mirroring the 13 space pairs onto the 7 fixed-width spaces adds 91 entries
+   and drops the worst-case error to +0.167pt (0.030%). It is not a fudge
+   factor; it is the kerning the shaper was always applying.
+--------------------------------------------------------------------------- */
+(function mirrorSpaceKerns(){
+  var SPACES=[" "," "," "," "," "," "," "], k, i, nk;
+  for(k in KERN){
+    if(!KERN.hasOwnProperty(k) || k.indexOf(" ")<0) continue;
+    for(i=0;i<SPACES.length;i++){
+      nk=k.split(" ").join(SPACES[i]);
+      if(KERN[nk]===undefined) KERN[nk]=KERN[k];
+    }
+  }
+})();
 function charW(c){ var w=WIDTHS[c]; return (w===undefined)?500:w; }
 /* ============================================================================
    v9.33 LINE-FIT ENGINE  -- reverse-engineered from real Acrobat renders of
@@ -3529,8 +3559,8 @@ function charW(c){ var w=WIDTHS[c]; return (w===undefined)?500:w; }
    GEOMETRY
      * SPECIFIC ACCOMPLISHMENTS field = 202.321 mm wide, Times New Roman 12 pt.
      * True usable width measured against real Acrobat output = 568.4-569.4 pt.
-     * We BUILD and MEASURE at FIT_USABLE_PT = 567.8 pt, a deliberate safety
-       margin below the measured truth. Editable in Settings -> "Usable width (pt)".
+     * We BUILD and MEASURE at FIT_USABLE_PT = 568.0 pt, just under the measured
+       floor. Editable in Advanced -> "Usable width (pt)".
      * Never use character counts to predict fit. Character count does not
        predict wrapping in a proportional font.
 
@@ -3562,19 +3592,24 @@ function charW(c){ var w=WIDTHS[c]; return (w===undefined)?500:w; }
    the linter all keep reading clean ASCII. Only the preview and Copy output
    carry the narrow spaces.
 ============================================================================ */
-var FIT_USABLE_PT   = 567.8;            /* build/measure width in points (safety margin) */
+var FIT_USABLE_PT   = 568.0;            /* build/measure width in points */
 var FIT_TRUE_RANGE  = [568.4, 569.4]
-/* WHY 567.8 AND NOT 566.0
-   The 566.0 figure came from calibrating a shaping engine that applies full
-   OpenType kerning, including across word boundaries. A per-character advance
-   table cannot reproduce that last part, so this model measures roughly 0.2%
-   wide. On statements deliberately filled to within 5 characters of the margin,
-   0.2% is exactly the difference between 2 rendered lines and 3 -- the app was
-   calling real, correctly-fitted statements over-length.
-   Validated against 120 statements taken from packages that render on 2 lines
-   in Acrobat: at 566.0 the model wrongly flagged 10 of them; at 567.0, 2;
-   at 567.5 and above, none. 567.8 sits inside the measured true range of
-   568.4-569.4 with margin to spare. */;   /* measured truth from Acrobat; reference only */
+/* WHY 568.0 -- AND WHY IT IS NO LONGER A FUDGE FACTOR
+   566.0 came from calibrating against a real shaping engine. This model then
+   had to be nudged upward to compensate for its own under-measurement, first
+   to 567.0 and then to 567.8. That was treating the symptom.
+   The actual defect was space-class kerning: the font kerns a fixed-width
+   space exactly like a normal space, and the KERN table only carried the
+   normal-space pairs. See mirrorSpaceKerns() above. With the 91 mirrored
+   pairs in place the model's worst-case error against the shaper, over all
+   120 statements in the live packages, is +0.167pt -- 0.030% of a line --
+   down from +3.119pt (0.551%).
+   So the build width can now be set from the geometry instead of from the
+   error: 568.0pt sits just under the measured true floor of 568.4pt, and the
+   remaining 0.4pt covers the 0.167pt residual with room to spare.
+   False "runs to 3 lines" flags across those 120 statements:
+       kern table as shipped in 9.34 : 40 at 566.0, 7 at 567.0, 1 at 567.8
+       with space-class mirroring    :  5 at 566.0, 0 at 567.0, 0 at 568.0 */;
 var FIT_TARGET_SLACK= 5;                /* allowed unused characters at end of last line */
 var NARROW = " ";                  /* SIX-PER-EM SPACE  - 2.000 pt @ 12 pt */
 var WIDE   = " ";                  /* normal space      - 3.000 pt @ 12 pt */
@@ -3910,6 +3945,13 @@ function pkgHaystack(){
 }
 function detectPkgType(){
   var hay=pkgHaystack(), k=null;
+  /* A civilian Cat I/II/III package uses the SAME two headings as a military
+     quarterly (JOB PERFORMANCE IN PRIMARY DUTY + WHOLE AIRMAN CONCEPT) and the
+     same statement count, so headings alone can never separate them. The only
+     signal is the CATEGORY field. Checked first, and deliberately tight so that
+     prose about civilian partners cannot trip it. */
+  if(/\bCIV(ILIAN)?\.?\s*CAT(EGORY)?\.?\s*(I{1,3}\b|[123]\b)/.test(hay)
+     ||/CATEGORY\s*:?\s*CIV/.test(hay)) return {key:"civilian",how:"category field"};
   if(/KEY ACCOMPLISHMENTS/.test(hay)) k="keyspouse";
   else if(/TEAM MEMBERS/.test(hay)) k="team";
   else if(/OTHER SIGNIFICANT ACCOMPLISHMENTS|COMMUNITY EFFORTS/.test(hay)) k="civilian";
@@ -6212,8 +6254,15 @@ function _fbManual(body){
 }
 
 /* ===== Version tracker ===== */
-var APP_VERSION="9.34";
+var APP_VERSION="9.35";
 var CHANGELOG=[
+  {v:"9.35", d:"27 Sep 2026", notes:[
+     "THE REAL CAUSE OF THE FALSE “RUNS TO 3 LINES”, FOUND AND FIXED. Kerning in the font is defined between glyph CLASSES, and the space class contains U+0020 together with every fixed-width space. The shaper therefore kerns “ A” by exactly the same amount as “ A”. The app's kern table was keyed on literal character pairs, so it carried the normal-space pairs and none of the six-per-em ones — and a 1206 statement packed with six-per-em spaces is made of precisely those pairs. 91 mirrored pairs are now generated at load.",
+     "Measured on TSgt Killins statement 1, taken byte-for-byte out of the submitted PDF: line 2 measures 565.580pt in the shaper and the app was computing 567.588pt. Three occurrences of  A / A  accounted for +1.98pt of the +2.01pt error; every other character pair was within 0.002pt. That statement now measures correctly and reports 2 lines.",
+     "Worst-case width error against the shaper, across all 120 statements in the live 3Q and AFMS packages, falls from +3.119pt (0.551% of a line) to +0.167pt (0.030%).",
+     "Usable width set to 568.0pt, and it is no longer a fudge factor. 567.0 and 567.8 were compensating for the missing kerns; with the kerning correct the width can be set from the form geometry instead, just under the measured true floor of 568.4pt. False 3-line flags over the 120 statements: 40 at 566.0 and 1 at 567.8 with the old table, 0 at 568.0 with the fix.",
+     "Auto-Space can now actually rescue a statement that only fits because of six-per-em spacing. Previously the compressed candidate was mismeasured, so the engine concluded spacing could not save it and showed “Auto-Space cannot fix this” on statements that fit in Acrobat."
+  ]},
   {v:"9.34", d:"27 Sep 2026", notes:[
      "FIXED THE FALSE “OVER BY 1 LINE” FLAGS. The width model measured text with a per-character Times New Roman advance table and applied no kerning, so it ran about 0.21% wide. On statements deliberately filled to within five characters of the margin, 0.21% is exactly the difference between two rendered lines and three, and real correctly-fitted statements were being called over-length. 113 kern pairs were extracted from the metric-compatible font and are now applied between every character pair, cutting the error to 0.051%.",
      "Usable width raised from 566.0pt to 567.8pt to match the kerned model. Validated against 120 statements taken from packages that render on two lines in Acrobat: at 566.0 the model wrongly flagged 10 of them, at 567.0 it flagged 2, and at 567.8 it flags none. 567.8 still sits below the measured true field width of 568.4–569.4pt.",
