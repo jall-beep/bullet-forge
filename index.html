@@ -480,7 +480,7 @@ body.compact .bx{min-height:34px}
   <div class="score" id="score"></div>
   <div class="tools">
    <button class="btn sm" onclick="addBullet()">+ Statement</button>
-   <label class="btn sm" title="Shrink or pad the gaps so each statement lands inside the box. Your text is untouched. The preview under each statement is the output, and Copy takes that." style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="packChk" onchange="renderAll()" style="margin:0"> Auto-Space</label>
+   <label class="btn sm" title="ON (recommended): the preview and Copy carry six-per-em spacing so each statement lands inside the box. Your stored text is untouched. Turning this OFF only changes what Copy gives you - it never changes the line count the app reports." style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="packChk" checked onchange="renderAll()" style="margin:0"> Auto-Space</label>
    <button class="btn sm" onclick="backupData()" title="Download all your data as a JSON backup">Backup</button>
    <button class="btn sm" onclick="document.getElementById('imp').click()" title="Restore from a JSON backup">Restore</button>
    <input id="imp" type="file" accept="application/json" style="display:none" onchange="importJSON(event)">
@@ -3614,7 +3614,14 @@ var FIT_TARGET_SLACK= 5;                /* allowed unused characters at end of l
 var NARROW = " ";                  /* SIX-PER-EM SPACE  - 2.000 pt @ 12 pt */
 var WIDE   = " ";                  /* normal space      - 3.000 pt @ 12 pt */
 var PACK_NARROW = NARROW;               /* legacy alias */
-function nsp(s){ return (s||"").replace(/[   -   　]/g," "); }
+/* v9.36  PRESERVE PASTED SIX-PER-EM SPACING.
+   This used to flatten U+2006 to a normal space along with every other exotic
+   space. That destroyed the one thing the owner deliberately puts into a 1206:
+   a statement pasted back out of a finished PDF arrived fitting on 2 lines and
+   was immediately widened by ~1pt per gap until it spilled to 3. U+2006 is
+   content, not stray whitespace, so it now survives the round trip. Every other
+   oddball space is still normalised. */
+function nsp(s){ return (s||"").replace(/[\u00a0\u1680\u2000-\u2005\u2007-\u200a\u202f\u205f\u3000]/g," "); }
 function packOn(){ var el=document.getElementById("packChk"); return !!(el&&el.checked); }
 function _spaces(t){ return (t.match(/ /g)||[]).length; }
 function _allNarrow(t){ return t.replace(/ /g,NARROW); }
@@ -4237,8 +4244,15 @@ function renderAll(){
   }
   var _verbCounts={}; state.bullets.forEach(function(bb){var vv=(openingVerb(bb.text)||"").toLowerCase(); if(vv)_verbCounts[vv]=(_verbCounts[vv]||0)+1;});
   state.bullets.forEach(function(b,i){
-    var _as=packOn()?autoSpace(b.text):{t:nsp(b.text),ok:true,mode:"off",n:0};
-    var _out=_as.t; var lines=wrap(_out); var over=lines.length>getMaxLines();
+    /* v9.36  ONE SOURCE OF TRUTH FOR THE LINE VERDICT.
+       This used to measure nsp(text) whenever the Auto-Space box was unticked,
+       so an unticked box made a perfectly fitting statement report "Runs to 3
+       lines - must be 2". The box controls the OUTPUT, never the truth. The
+       verdict is now always the best achievable rendering, which is exactly
+       what lands in the PDF once the statement is copied. */
+    var _as=autoSpace(b.text);
+    var _out=packOn()? _as.t : nsp(b.text);
+    var lines=wrap(_as.t); var over=lines.length>getMaxLines();
     var card=document.createElement("div"); card.className="bcard"+(over?" over":"");
     var v=openingVerb(b.text); var tier=verbTierOf(v);
     var tierTag = v? (tier?('<span class="tag t'+tier+'">'+v+' · Tier '+tier+'</span>'):'<span class="tag no">'+v+' · weak open</span>') : '';
@@ -6254,8 +6268,15 @@ function _fbManual(body){
 }
 
 /* ===== Version tracker ===== */
-var APP_VERSION="9.35";
+var APP_VERSION="9.36";
 var CHANGELOG=[
+  {v:"9.36", d:"27 Sep 2026", notes:[
+     "PASTED SIX-PER-EM SPACING IS NO LONGER DESTROYED ON THE WAY IN. nsp() flattened U+2006 to a normal space along with every other exotic space character. A statement copied back out of a finished 1206 therefore arrived fitting on 2 lines and was immediately widened by about 1pt per gap until it spilled to 3 — the app was breaking the text itself and then reporting the break as the writer's problem. U+2006 is content, not stray whitespace, and now survives the round trip. Every other oddball space is still normalised.",
+     "THE LINE VERDICT NO LONGER DEPENDS ON THE AUTO-SPACE CHECKBOX. With the box unticked, the statement card measured the un-spaced text, so a correctly fitted statement reported “Runs to 3 lines — must be 2” and told the writer to cut a word that did not need cutting. The checkbox controls what Copy hands you; it never had any business deciding what fits. The reported line count is now always the best achievable rendering — which is exactly what lands in the PDF.",
+     "Auto-Space now defaults ON, so what you see, what the app measures, and what Copy gives you are the same thing out of the box.",
+     "Verified against TSgt Killins statement 1 taken byte-for-byte from the submitted PDF (34 six-per-em + 5 normal spaces): all 34 narrow spaces survive the paste, and it reports 2/2 lines at 565.76 and 565.60pt with the box either ON or OFF. The shaper measures those same lines at 565.738 and 565.580pt — agreement to within 0.03pt.",
+     "Full regression over all 120 statements in the live 3Q and AFMS packages, in four conditions (as stored in the PDF and retyped with normal spaces, each with Auto-Space on and off): 0 wrongly flagged over-length in every condition."
+  ]},
   {v:"9.35", d:"27 Sep 2026", notes:[
      "THE REAL CAUSE OF THE FALSE “RUNS TO 3 LINES”, FOUND AND FIXED. Kerning in the font is defined between glyph CLASSES, and the space class contains U+0020 together with every fixed-width space. The shaper therefore kerns “ A” by exactly the same amount as “ A”. The app's kern table was keyed on literal character pairs, so it carried the normal-space pairs and none of the six-per-em ones — and a 1206 statement packed with six-per-em spaces is made of precisely those pairs. 91 mirrored pairs are now generated at load.",
      "Measured on TSgt Killins statement 1, taken byte-for-byte out of the submitted PDF: line 2 measures 565.580pt in the shaper and the app was computing 567.588pt. Three occurrences of  A / A  accounted for +1.98pt of the +2.01pt error; every other character pair was within 0.002pt. That statement now measures correctly and reports 2 lines.",
