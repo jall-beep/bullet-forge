@@ -407,6 +407,20 @@ body.compact .bx{min-height:34px}
 #pkgbar .pkgtip{color:var(--ink)}
 #pkgbar .pkgtip b{color:var(--gold)}
 #qcbar{margin:0 0 12px}
+#pkgTypeBar{margin:0 0 10px;padding:8px 12px;background:var(--panel);border:1px solid var(--line);border-radius:8px;font-size:12px}
+#pkgTypeBar:empty{display:none}
+#pkgTypeBar .ptline{font-weight:700;color:var(--gold);font-size:13px}
+#pkgTypeBar .ptsub{color:var(--ink2);margin-top:3px}
+#pkgTypeBar .ptnote{margin-top:7px;padding:7px 9px;border:1px dashed var(--acc);border-radius:6px;color:var(--ink);display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+#pkgTypeBar .ptnote b{color:var(--gold)}
+#pkgTypeBar .ptareas{margin-top:7px;display:flex;flex-wrap:wrap;gap:3px 7px;align-items:baseline;color:var(--ink2)}
+#pkgTypeBar .ptareas .pta b{color:var(--ink)}
+#pkgTypeBar .ptareas .ptsep{opacity:.45}
+#pkgCountsWrap{display:flex;flex-direction:column;gap:5px;margin-top:6px}
+#pkgCountsWrap .pcrow{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:11.5px;color:var(--ink2)}
+#pkgCountsWrap .pcrow .pcname{color:var(--gold);font-weight:700;min-width:190px}
+#pkgCountsWrap .pcrow input{width:54px;padding:2px 4px}
+#pkgCountsWrap .pcrow .pctot{color:var(--ink)}
 #bfFooter{max-width:1500px;margin:26px auto 30px;padding:12px 18px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink3);line-height:1.6}
 #bfFooter .bf-note{margin-bottom:5px;color:var(--ink2)}
 #bfFooter .bf-row{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline}
@@ -471,15 +485,17 @@ body.compact .bx{min-height:34px}
     <div class="fld"><label>Font size (pt)</label><input id="pPt" value="12" oninput="renderAll()"></div>
     <div class="fld"><label>Max lines</label><input id="pLines" value="2" oninput="renderAll()"></div>
     <div class="fld"><label>Calibration %</label><input id="pCal" value="100" oninput="renderAll()"></div>
-    <div class="fld"><label>Package type</label><select id="pkgType" onchange="renderAll()"><option value="quarterly">Individual quarterly (4+2)</option><option value="annual">AFMS annual (10)</option><option value="team">Team (6 + TEAM MEMBERS)</option><option value="volunteer">Volunteer (4, no headings)</option></select></div>
+    <div class="fld"><label>Package type</label><select id="pkgType" onchange="onPkgTypeChange()"><option value="auto">Auto (detect from content)</option><option value="quarterly">Individual quarterly (military)</option><option value="annual_afms">AFMS annual</option><option value="annual_mil">Individual annual (military)</option><option value="team">Team</option><option value="volunteer">Volunteer</option><option value="civilian">Civilian</option><option value="keyspouse">Key Spouse</option></select></div>
     <div class="fld"><label title="Width actually used for wrapping. Measured truth from real Acrobat renders is 568.4-569.4pt; 566.0 is the safe build target.">Usable width (pt)</label><input id="pWpt" value="566.0" oninput="renderAll()"></div>
     <div class="muted" style="max-width:230px">Defaults match the DAF Form 1206 (20240313) SPECIFIC ACCOMPLISHMENTS field &mdash; 202.321&nbsp;mm, Times New Roman 12pt. Usable width was measured against real Acrobat renders at 568.4&ndash;569.4pt; we build at <b>566.0pt</b> for margin. Wrapping is measured by glyph width, never by character count.</div>
+    <div class="fld" id="pkgCountsFld" style="flex:1 1 100%"><label>Section counts per package type</label><div class="muted" style="max-width:none">Local wing recognition instructions vary. These counts are yours, they persist, and QC never hard-fails a count you set here. Use <b>Reset to preset</b> to go back to the convention observed in this unit’s submitted packages.</div><div id="pkgCountsWrap"></div></div>
    </div>
    <textarea class="pastebox" id="paste" placeholder="Paste a full package or a block of bullets here — they auto-split into separate statements. Or hit + Statement above."></textarea>
    <div style="margin:-6px 0 14px"><button class="btn gold sm" onclick="ingestPaste()">Split &amp; load pasted bullets</button>
     <span class="muted" style="margin-left:8px">Headers, eligibility quotes &amp; wrapped lines handled automatically.</span></div>
    <div style="margin:0 0 12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" onclick="copyAllBullets()">Copy all</button><button class="btn sm" onclick="copyMD()">Copy MD</button><button class="btn sm" onclick="exportTxt()">.txt</button><button class="btn sm" onclick="exportCSV()">.csv</button><button class="btn sm" onclick="exportMD()">.md</button><button class="btn sm" onclick="printPkg()">Print</button><button class="btn sm" onclick="document.getElementById('impTxt').click()">Import .txt</button><button class="btn sm" onclick="autoCleanAll()">Auto-clean all</button><button class="btn sm" onclick="togglePreviews()">Previews</button><button class="btn sm" onclick="toggleDensity()">Density</button><button class="btn sm danger" onclick="clearAll()" style="margin-left:auto">Clear all</button></div>
    <div id="pkgbar"></div>
+   <div id="pkgTypeBar"></div>
    <div id="qcbar"></div>
    <div id="bullets"></div>
   </section>
@@ -515,7 +531,7 @@ body.compact .bx{min-height:34px}
 <footer id="bfFooter">
  <div class="bf-note">Bullet Forge runs entirely in your browser. Nothing you type leaves this page unless you use the synonym popup or explicitly submit feedback.</div>
  <div class="bf-row">
-  <span class="bf-ver">Bullet Forge <b id="bfVer">v9.32</b></span>
+  <span class="bf-ver">Bullet Forge <b id="bfVer">v9.33</b></span>
   <span class="bf-sep">&middot;</span>
   <span class="bf-uses">Built with: plain ES5 JavaScript, no frameworks, no build step, no analytics &middot; a Times New Roman AFM glyph-width table for PDF-accurate line measurement &middot; U+2006 six-per-em spacing for 1206 line fit &middot; browser <code>localStorage</code> for autosave &middot; Clipboard and Blob APIs for copy, export and print &middot; the public Datamuse word API for the optional synonym popup</span>
   <span class="bf-sep">&middot;</span>
@@ -3450,7 +3466,7 @@ window.DECO={"templates": {"AAM": {"name": "Air & Space Achievement Medal", "ope
 var WIDTHS={" ":250,"!":333,"\"":408,"#":500,"$":500,"%":833,"&":778,"'":180,"(":333,")":333,"*":500,"+":564,",":250,"-":333,".":250,"/":278,"0":500,"1":500,"2":500,"3":500,"4":500,"5":500,"6":500,"7":500,"8":500,"9":500,":":278,";":278,"<":564,"=":564,">":564,"?":444,"@":921,"A":722,"B":667,"C":667,"D":722,"E":611,"F":556,"G":722,"H":722,"I":333,"J":389,"K":722,"L":611,"M":889,"N":722,"O":722,"P":556,"Q":722,"R":667,"S":556,"T":611,"U":722,"V":722,"W":944,"X":722,"Y":722,"Z":611,"[":333,"\\":278,"]":333,"^":469,"_":500,"`":333,"a":444,"b":500,"c":444,"d":500,"e":444,"f":333,"g":500,"h":500,"i":278,"j":278,"k":500,"l":278,"m":778,"n":500,"o":500,"p":500,"q":500,"r":333,"s":389,"t":278,"u":500,"v":500,"w":722,"x":500,"y":500,"z":444,"{":480,"|":200,"}":480,"~":541,"\u2019":333,"\u2018":333,"\u201c":444,"\u201d":444,"\u2013":500,"\u2014":1000,"\u00a0":250,"\u2000":500,"\u2001":1000,"\u2002":500,"\u2003":1000,"\u2004":333,"\u2005":250,"\u2006":166.66666666666666,"\u2007":500,"\u2008":250,"\u2009":200,"\u200a":100,"\u200b":0,"\u202f":200,"\u205f":222,"\u3000":1000,"\u2011":333,"\u2212":564};
 function charW(c){ var w=WIDTHS[c]; return (w===undefined)?500:w; }
 /* ============================================================================
-   v9.32 LINE-FIT ENGINE  -- reverse-engineered from real Acrobat renders of
+   v9.33 LINE-FIT ENGINE  -- reverse-engineered from real Acrobat renders of
    DAF Form 1206 (20240313). These numbers are measured fact, not estimates.
    ----------------------------------------------------------------------------
    GEOMETRY
@@ -3585,6 +3601,8 @@ function splitBullets(raw){
     if(s===""){ if(cur!==null){chunks.push(cur);cur=null;} continue; }
     if(/^["\u201c]/.test(s)) continue;
     if(/:$/.test(s) && s.replace(/[^A-Za-z]/g,"")===s.replace(/[^A-Za-z]/g,"").toUpperCase()){ if(cur!==null){chunks.push(cur);cur=null;} continue; }
+    /* v9.33: a known package heading is a section marker, not a statement -- colon or not */
+    if(PKG_HEAD_RE.test(s) && s.replace(/[^A-Za-z]/g,"")===s.replace(/[^A-Za-z]/g,"").toUpperCase()){ if(cur!==null){chunks.push(cur);cur=null;} continue; }
     if(/^[-\u2022*]\s+/.test(s) || s==="-"){ if(cur!==null)chunks.push(cur); cur=s; }
     else { if(cur===null) cur="- "+s; else cur+=" "+s; }
   }
@@ -3633,6 +3651,12 @@ function addBullet(t){ state.bullets.push({id:uid(),text:t||""}); save(); render
 function delBullet(id){ var idx=state.bullets.findIndex(function(b){return b.id==id;}); if(idx<0)return; _lastDeleted={idx:idx,bullet:state.bullets[idx]}; state.bullets.splice(idx,1); save(); renderAll(); flashUndo("Statement deleted."); }
 function ingestPaste(){
   var raw=$("paste").value; if(!raw.trim())return;
+  /* v9.33: keep the full-caps heading lines so auto-detect still works after the split */
+  try{
+    state.pkgHeads=raw.replace(/\r/g,"").split("\n").map(function(x){return x.trim();})
+      .filter(function(x){ return x&&x.length<=80&&/[A-Z]{3}/.test(x)&&x===x.toUpperCase(); })
+      .slice(0,16).join("\n");
+  }catch(e){}
   splitBullets(raw).forEach(function(t){ state.bullets.push({id:uid(),text:t}); });
   $("paste").value=""; save(); renderAll();
 }
@@ -3720,7 +3744,7 @@ function lint(text,ctx){ text=nsp(text);
 }
 
 /* ============================================================================
-   v9.32 HARD WRITING RULES  (the owner's non-negotiables for a 1206 package)
+   v9.33 HARD WRITING RULES  (the owner's non-negotiables for a 1206 package)
    Statement-level checks run per card; package-level checks run in the QC bar.
    Nothing here rewrites the user's text -- it only flags.
 ============================================================================ */
@@ -3735,19 +3759,183 @@ var HARD_RULES=[
   ["Three hard numbers","Target 3 or more hard numbers per statement."],
   ["No repetition","No repeated distinctive word inside a statement, and no repeated metric across the package."],
   ["Earned superlatives only","No self-asserted superlative without a conferring verb: won, awarded, named, selected, earned, recognized."],
-  ["Structure","Individual quarterly: 4 statements under JOB PERFORMANCE IN PRIMARY DUTY + 2 under WHOLE AIRMAN CONCEPT. AFMS annual: 10 statements under one LEADERSHIP AND JOB PERFORMANCE heading. Team: one section, 6 statements + TEAM MEMBERS. Volunteer: 4 statements, no headings. Headings are full caps."]
+  ["Structure","Individual quarterly: 4 under JOB PERFORMANCE IN PRIMARY DUTY + 2 under WHOLE AIRMAN CONCEPT. AFMS annual: 10 under one LEADERSHIP AND JOB PERFORMANCE heading. Individual annual (military): LEADERSHIP AND JOB PERFORMANCE IN PRIMARY DUTY + WHOLE AIRMAN CONCEPT. Team: one section, 6 + TEAM MEMBERS. Volunteer: 4, no headings. Civilian: LEADERSHIP AND JOB PERFORMANCE + OTHER SIGNIFICANT ACCOMPLISHMENTS / COMMUNITY EFFORTS. Key Spouse: KEY ACCOMPLISHMENTS + OTHER ACCOMPLISHMENTS / COMMUNITY EFFORTS. Headings are full caps. Bullet Forge auto-detects the type from your headings or statement count; every count is editable in Settings because local wing instructions vary."]
 ];
+/* ----------------------------------------------------------------------------
+   v9.33 PACKAGE-TYPE CATALOGUE
+   Section counts below are PRESETS -- the convention observed in this unit's
+   own submitted packages plus published wing recognition instructions. Local
+   instructions vary, so every count is user-editable in Settings and stored in
+   state.pkgCounts. pkgStruct() is the only thing QC and scoring may read.
+---------------------------------------------------------------------------- */
 var PKG_STRUCTURE={
-  "quarterly":{label:"Individual quarterly",total:6,
+  "quarterly":{label:"Individual quarterly (military)",
     sections:[{h:"JOB PERFORMANCE IN PRIMARY DUTY",n:4},{h:"WHOLE AIRMAN CONCEPT",n:2}]},
-  "annual":{label:"AFMS annual",total:10,
-    sections:[{h:"LEADERSHIP AND JOB PERFORMANCE",n:10}]},
-  "team":{label:"Team",total:6,
+  "annual_afms":{label:"AFMS annual",
+    sections:[{h:"LEADERSHIP AND JOB PERFORMANCE",n:10}],extra:"Single section, one heading"},
+  "annual_mil":{label:"Individual annual (military)",
+    sections:[{h:"LEADERSHIP AND JOB PERFORMANCE IN PRIMARY DUTY",n:6},{h:"WHOLE AIRMAN CONCEPT",n:3}]},
+  "team":{label:"Team",
     sections:[{h:"(single section)",n:6}],extra:"TEAM MEMBERS block required"},
-  "volunteer":{label:"Volunteer",total:4,
-    sections:[{h:"(no headings)",n:4}]}
+  "volunteer":{label:"Volunteer",
+    sections:[{h:"(no headings)",n:4}],extra:"Narrative style, no headings"},
+  "civilian":{label:"Civilian",
+    sections:[{h:"LEADERSHIP AND JOB PERFORMANCE",n:4},{h:"OTHER SIGNIFICANT ACCOMPLISHMENTS / COMMUNITY EFFORTS",n:2}]},
+  "keyspouse":{label:"Key Spouse",
+    sections:[{h:"KEY ACCOMPLISHMENTS",n:4},{h:"OTHER ACCOMPLISHMENTS / COMMUNITY EFFORTS",n:2}]}
 };
-function pkgType(){ var el=$("pkgType"); return el? el.value : "quarterly"; }
+var PKG_ORDER=["quarterly","annual_afms","annual_mil","team","volunteer","civilian","keyspouse"];
+var PKG_ALIAS={"annual":"annual_afms"};   /* pre-v9.33 saved settings */
+/* heading lines that must never be swallowed into a statement by splitBullets */
+var PKG_HEAD_RE=/^(?:LEADERSHIP AND JOB PERFORMANCE(?: IN PRIMARY DUTY)?|JOB PERFORMANCE IN PRIMARY DUTY|WHOLE AIRMAN CONCEPT|TEAM MEMBERS|OTHER SIGNIFICANT ACCOMPLISHMENTS|OTHER ACCOMPLISHMENTS|COMMUNITY EFFORTS|KEY ACCOMPLISHMENTS|SPECIFIC ACCOMPLISHMENTS)\b[\s:.\-\u2013\u2014]*$/i;
+function pkgKey(k){ k=k||""; return PKG_ALIAS[k]||k; }
+function pkgCountOverride(k){ try{ var o=state.pkgCounts&&state.pkgCounts[k]; return (o&&o.length)?o:null; }catch(e){ return null; } }
+/* live structure for a type: presets with the user's Settings counts applied */
+function pkgStruct(k){
+  k=pkgKey(k); var base=PKG_STRUCTURE[k]; if(!base) return null;
+  var ov=pkgCountOverride(k)||[], tot=0;
+  var secs=base.sections.map(function(sec,i){
+    var n=(ov[i]!=null&&ov[i]!=="")?parseInt(ov[i],10):sec.n;
+    if(!isFinite(n)||n<0) n=sec.n; tot+=n; return {h:sec.h,n:n};
+  });
+  return {key:k,label:base.label,sections:secs,total:tot,extra:base.extra,custom:!!pkgCountOverride(k)};
+}
+function setPkgCount(k,i,v){
+  k=pkgKey(k); if(!PKG_STRUCTURE[k])return;
+  state.pkgCounts=state.pkgCounts||{};
+  var arr=(pkgCountOverride(k)||PKG_STRUCTURE[k].sections.map(function(x){return x.n;})).slice();
+  var n=parseInt(v,10); if(!isFinite(n)||n<0)n=0; if(n>60)n=60; arr[i]=n;
+  state.pkgCounts[k]=arr; save(); renderPkgCounts(); renderAll();
+}
+function resetPkgCount(k){
+  k=pkgKey(k); try{ if(state.pkgCounts) delete state.pkgCounts[k]; }catch(e){}
+  save(); renderPkgCounts(); renderAll(); flashToast(PKG_STRUCTURE[k].label+" reset to preset.");
+}
+function renderPkgCounts(){
+  var el=$("pkgCountsWrap"); if(!el)return;
+  el.innerHTML=PKG_ORDER.map(function(k){
+    var st=pkgStruct(k);
+    var ins=st.sections.map(function(sec,i){
+      var lbl=(sec.h.charAt(0)==="(")? "statements" : sec.h.split(/\s+/).slice(0,3).join(" ");
+      return '<label title="'+escHtml(sec.h)+'">'+escHtml(lbl)+' <input type="number" min="0" max="60" step="1" value="'+sec.n+'" onchange="setPkgCount(\''+k+'\','+i+',this.value)"></label>';
+    }).join("");
+    return '<div class="pcrow"><span class="pcname">'+escHtml(st.label)+'</span>'+ins+
+      '<span class="pctot">= '+st.total+'</span>'+
+      (st.custom?'<button class="btn sm" onclick="resetPkgCount(\''+k+'\')">Reset to preset</button>':'<span>preset</span>')+'</div>';
+  }).join("");
+}
+/* ---- auto-detection ------------------------------------------------------
+   Signal 1: explicit full-caps headings anywhere in the pasted text, the
+   statements themselves, or the headings captured at ingest. Longest/most
+   specific heading set wins, so "LEADERSHIP AND JOB PERFORMANCE IN PRIMARY
+   DUTY" is never mistaken for the AFMS annual single heading.
+   Signal 2: statement count matching a known structure (first in PKG_ORDER).
+-------------------------------------------------------------------------- */
+function pkgHaystack(){
+  var parts=[];
+  try{ var p=$("paste"); if(p&&p.value) parts.push(p.value); }catch(e){}
+  try{ if(state.pkgHeads) parts.push(state.pkgHeads); }catch(e){}
+  try{ (state.bullets||[]).forEach(function(b){ if(b&&b.text) parts.push(b.text); }); }catch(e){}
+  return parts.join("\n").toUpperCase();
+}
+function detectPkgType(){
+  var hay=pkgHaystack(), k=null;
+  if(/KEY ACCOMPLISHMENTS/.test(hay)) k="keyspouse";
+  else if(/TEAM MEMBERS/.test(hay)) k="team";
+  else if(/OTHER SIGNIFICANT ACCOMPLISHMENTS|COMMUNITY EFFORTS/.test(hay)) k="civilian";
+  else if(/LEADERSHIP AND JOB PERFORMANCE IN PRIMARY DUTY/.test(hay)||(/LEADERSHIP AND JOB PERFORMANCE/.test(hay)&&/WHOLE AIRMAN CONCEPT/.test(hay))) k="annual_mil";
+  else if(/JOB PERFORMANCE IN PRIMARY DUTY/.test(hay)&&/WHOLE AIRMAN CONCEPT/.test(hay)) k="quarterly";
+  else if(/LEADERSHIP AND JOB PERFORMANCE/.test(hay)) k="annual_afms";
+  if(k) return {key:k,how:"heading"};
+  var n=0; try{ n=(state.bullets||[]).filter(function(b){return b&&b.text&&b.text.trim();}).length; }catch(e){}
+  if(n){ for(var i=0;i<PKG_ORDER.length;i++){ var st=pkgStruct(PKG_ORDER[i]); if(st&&st.total===n) return {key:PKG_ORDER[i],how:"statement count"}; } }
+  return {key:null,how:"none"};
+}
+/* the selector is an OVERRIDE, not the source of truth */
+function pkgSel(){ var el=$("pkgType"); return el? pkgKey(el.value||"auto") : "auto"; }
+function pkgType(){
+  var sel=pkgSel();
+  if(sel&&sel!=="auto"&&PKG_STRUCTURE[sel]) return sel;
+  var d=detectPkgType();
+  return d.key||"quarterly";
+}
+function pkgMismatch(){
+  var sel=pkgSel(); if(sel==="auto") return null;
+  var d=detectPkgType(); if(!d.key||d.key===sel) return null;
+  return d;
+}
+function useDetectedType(){
+  var d=detectPkgType();
+  if(!d.key){ flashToast("Nothing to detect from yet."); return; }
+  var el=$("pkgType"); if(el) el.value=d.key;
+  save(); renderAll(); try{renderVocab();}catch(e){} flashToast("Package type set to "+PKG_STRUCTURE[d.key].label+".");
+}
+function onPkgTypeChange(){ renderAll(); try{renderVocab();}catch(e){} }
+/* ---- per-type scoring weights (each new set totals 100) ----------------- */
+var SCORING_BY_TYPE={
+  "annual_afms":[
+    {area:"Primary Duty",pts:30,focus:"Clinical or technical performance in the primary duty across the full year. Quantify volume, throughput, accuracy, readiness.",cue:["duty","clinical","patients","cases","operations","ops","mission","section","throughput","accuracy"]},
+    {area:"Leadership",pts:25,focus:"Teams led, Airmen developed, programs owned. Show decisions made and people grown.",cue:["led","mentor","develop","supervis","team","direct","trained","oversaw","program manager"]},
+    {area:"Innovation/Improvement",pts:20,focus:"Process redesign, first-of-its-kind work, measurable reduction in time, cost or error.",cue:["innovat","process","streamlin","redesign","first","pioneer","automat","reduc","eliminat","improv","standardiz"]},
+    {area:"Scope & Partnership",pts:15,focus:"How far the work reached and who it was done with. Chain at least two tiers, name the partner.",cue:["Sq","Gp","Wg","MDG","MTF","PACAF","DAF","AFMS","MAJCOM","joint","JASDF","partner","coalition","host nation","tri-service"]},
+    {area:"Recognition",pts:10,focus:"Named, conferred recognition. A real award, ranking or selection, never a placeholder.",cue:["won","awarded","named","selected","earned","recognized","coin","trophy","of the","honor","nominated"]}
+  ],
+  "team":[
+    {area:"Mission Impact",pts:35,focus:"What the team delivered to the mission. Quantify readiness, throughput, response, capability restored.",cue:["mission","readiness","sortie","patients","throughput","capability","uptime","response","sustained","restored","supported"]},
+    {area:"Process/Innovation",pts:25,focus:"How the team changed the way the work is done. Measurable time, cost or error reduction.",cue:["innovat","process","streamlin","redesign","first","pioneer","automat","reduc","eliminat","improv","standardiz"]},
+    {area:"Scope & Partnership",pts:20,focus:"Reach of the team's work and the units or partners it pulled in.",cue:["Sq","Gp","Wg","MDG","MTF","PACAF","DAF","MAJCOM","joint","JASDF","partner","coalition","host nation","tri-service","agencies"]},
+    {area:"Recognition",pts:20,focus:"Named team-level recognition conferred on the group, not on one member.",cue:["won","awarded","named","selected","earned","recognized","team of the","coin","trophy","honor"]}
+  ],
+  "volunteer":[
+    {area:"Volunteer Service",pts:35,focus:"Off-duty service itself. Hours donated, funds raised, people served -- give all three where they exist.",cue:["volunteer","hours","hrs","raised","donat","funds","fundrais","off-duty","shifts","served"]},
+    {area:"Community Impact",pts:30,focus:"What changed for the community. Name the beneficiary and the result, not the activity.",cue:["community","outreach","school","families","morale","QoL","event","local","host nation","students","residents"]},
+    {area:"Scope & Partnership",pts:20,focus:"Base, installation, local-national or MAJCOM reach, and the organizations partnered with.",cue:["Sq","Gp","Wg","base","installation","MAJCOM","PACAF","DAF","joint","host nation","JASDF","agency","chapel","USO"]},
+    {area:"Recognition",pts:15,focus:"Named recognition for the service. Volunteer of the quarter, a coin, a letter of appreciation.",cue:["won","awarded","named","selected","earned","recognized","coin","trophy","of the","honor","LOA"]}
+  ],
+  "civilian":[
+    {area:"Leadership and Job Performance",pts:45,focus:"Core position performance and program ownership. Quantify budget, workload, people and results.",cue:["led","managed","supervis","program","duty","performance","directed","oversaw","budget","section","position"]},
+    {area:"Other Significant Accomplishments / Community Efforts",pts:25,focus:"Work outside the position description -- additional duties, off-duty service, education.",cue:["volunteer","community","outreach","additional duty","off-duty","education","certif","raised","morale","committee"]},
+    {area:"Scope",pts:20,focus:"How far the work reached. Push section to Sq, Gp, Wg, installation, MAJCOM.",cue:["Sq","Gp","Wg","MDG","MTF","installation","base","MAJCOM","PACAF","DAF","joint","agency"]},
+    {area:"Recognition",pts:10,focus:"Named, conferred recognition. A real award, ranking or selection.",cue:["won","awarded","named","selected","earned","recognized","coin","trophy","of the","honor"]}
+  ],
+  "keyspouse":[
+    {area:"Key Accomplishments",pts:45,focus:"Key Spouse program work itself. Families contacted, briefings given, referrals made, events run.",cue:["key spouse","briefed","families","program","mentor","coordinat","event","welcomed","information","referral","newcomers"]},
+    {area:"Community Efforts",pts:25,focus:"Service beyond the program. Hours, funds, morale, people reached.",cue:["volunteer","community","outreach","hours","hrs","raised","donat","morale","event","families","support"]},
+    {area:"Scope",pts:20,focus:"Squadron, group, wing or installation reach, and the agencies partnered with.",cue:["Sq","Gp","Wg","base","installation","A&FRC","chapel","MDG","PACAF","joint","host nation","agency"]},
+    {area:"Recognition",pts:10,focus:"Named, conferred recognition for the volunteer work.",cue:["won","awarded","named","selected","earned","recognized","coin","trophy","of the","honor","LOA"]}
+  ]
+};
+/* quarterly and annual_mil keep the five published areas in VOCAB.scoring */
+function scoringFor(k){
+  k=pkgKey(k||pkgType());
+  var s=SCORING_BY_TYPE[k];
+  return (s&&s.length)?s:VOCAB.scoring;
+}
+function scoringTotal(k){ var t=0; scoringFor(k).forEach(function(a){t+=a.pts;}); return t; }
+/* active-type banner + detection notice + scored-area breakdown, above the QC bar */
+function renderPkgTypeBar(){
+  var el=$("pkgTypeBar"); if(!el)return;
+  var key=pkgType(), st=pkgStruct(key);
+  if(!st){ el.innerHTML=""; return; }
+  var sel=pkgSel(), det=detectPkgType(), mis=pkgMismatch();
+  var h='<div class="ptline">Scoring as: '+escHtml(st.label)+' ('+st.total+' statement'+(st.total==1?'':'s')+')</div>';
+  h+='<div class="ptsub">'+st.sections.map(function(x){return escHtml(x.h)+' \u2014 '+x.n;}).join(' \u00b7 ')+
+     (st.extra?' \u00b7 '+escHtml(st.extra):'')+
+     ' \u00b7 '+(sel==="auto"? (det.key? 'auto-detected by '+escHtml(det.how) : 'auto \u2014 nothing detected yet, defaulting to quarterly') : 'selector override in Settings')+
+     (st.custom?' \u00b7 your Settings counts':' \u00b7 preset counts')+'</div>';
+  if(mis){
+    var dst=pkgStruct(mis.key);
+    h+='<div class="ptnote"><span>Heads up \u2014 the content looks like <b>'+escHtml(dst.label)+'</b> ('+dst.total+
+       ' statements, detected by '+escHtml(mis.how)+'), but the selector says <b>'+escHtml(st.label)+'</b>. '+
+       'Nothing needs adding or trimming; the selector is just set to a different type.</span>'+
+       '<button class="btn sm gold" onclick="useDetectedType()">Use detected type</button></div>';
+  }
+  var sc=scoringFor(key);
+  h+='<div class="ptareas"><span>Scored areas for <b>'+escHtml(st.label)+'</b> \u2014 '+scoringTotal(key)+' pts:</span>'+
+     sc.map(function(a){return '<span class="pta" title="'+escHtml(a.focus)+'"><b>'+escHtml(a.area)+'</b> '+a.pts+'</span>';}).join('<span class="ptsep">\u00b7</span>')+
+     '</div>';
+  el.innerHTML=h;
+}
 /* acronyms that must never appear spelled out */
 var LOCKED_ACR=[
   [/\bmedical treatment facilit(?:y|ies)\b/i,"MTF"],
@@ -3808,10 +3996,16 @@ function lintHard(text,ctx){
 function pkgQC(){
   var bs=state.bullets.filter(function(b){return b.text&&b.text.trim();});
   var out=[];
-  var st=PKG_STRUCTURE[pkgType()];
-  if(st){
-    if(bs.length!==st.total) out.push({t:"err",m:st.label+" needs exactly "+st.total+" statements",x:"You have "+bs.length+". "+st.sections.map(function(s){return s.h+" — "+s.n;}).join("; ")+(st.extra?". "+st.extra:"")+". Headings in full caps."});
-    else out.push({t:"ok",m:st.label+" structure: "+st.total+" statements ✓",x:st.sections.map(function(s){return s.h+" — "+s.n;}).join("; ")+(st.extra?". "+st.extra:"")});
+  var _ak=pkgType(), st=pkgStruct(_ak), _mis=pkgMismatch();
+  if(st&&bs.length){
+    var _shape=st.sections.map(function(s){return s.h+" — "+s.n;}).join("; ")+(st.extra?". "+st.extra:"");
+    if(bs.length===st.total) out.push({t:"ok",m:st.label+" structure: "+st.total+" statements ✓",x:_shape});
+    else if(_mis){
+      var _d=pkgStruct(_mis.key);
+      out.push({t:"warn",m:"Package type looks wrong — scoring as "+st.label+" ("+st.total+")",
+        x:"The content reads as "+_d.label+" ("+_d.total+" statements, detected by "+_mis.how+") and you have "+bs.length+". This is a notice, not a count error — do not add or trim statements. Use “Use detected type” in the bar above, or change Package type in Settings."});
+    }
+    else out.push({t:"err",m:st.label+" needs exactly "+st.total+" statements",x:"You have "+bs.length+". "+_shape+". Headings in full caps. Counts are editable in Settings if your wing instruction differs."});
   }
   /* one resolution per abbreviation across the package */
   var joined=bs.map(function(b){return nsp(b.text);}).join(" \u0001 ");
@@ -3837,6 +4031,7 @@ function pkgQC(){
   return out;
 }
 function renderQC(){
+  try{ renderPkgTypeBar(); }catch(e){}
   var el=$("qcbar"); if(!el) return;
   var q=pkgQC();
   if(!q.length){ el.innerHTML=""; return; }
@@ -3844,7 +4039,7 @@ function renderQC(){
     q.map(function(x){ return '<div class="flag '+x.t+'"><b>'+x.m+'</b> '+x.x+'</div>'; }).join("");
 }
 function hardRulesHTML(){
-  var h='<div class="ruleg"><h4>Hard writing rules (v9.32)</h4><div class="muted">These are checked on every statement and across the package. They are not preferences.</div><table class="tablish" style="margin-top:8px"><tr><th>Rule</th><th>What it means</th></tr>';
+  var h='<div class="ruleg"><h4>Hard writing rules (v9.33)</h4><div class="muted">These are checked on every statement and across the package. They are not preferences.</div><table class="tablish" style="margin-top:8px"><tr><th>Rule</th><th>What it means</th></tr>';
   HARD_RULES.forEach(function(r){ h+='<tr><td style="color:var(--gold);font-weight:700;white-space:nowrap">'+escHtml(r[0])+'</td><td>'+escHtml(r[1])+'</td></tr>'; });
   h+='</table>';
   h+='<div class="muted" style="margin-top:10px"><b>Line fit.</b> The SPECIFIC ACCOMPLISHMENTS field on DAF Form 1206 (20240313) is 202.321 mm wide in Times New Roman 12pt. Usable width measured against real Acrobat renders is 568.4–569.4pt; Bullet Forge builds and measures at 566.0pt for margin. A normal space is exactly 3.000pt; U+2006 six-per-em is exactly 2.000pt, so each swap buys exactly 1.000pt. Statements are compressed with U+2006 and then polished — gaps widened back per line using only that line\u0027s own slack — so each line reaches the right margin without moving the wrap point. Character counts are never used to predict wrapping.</div></div>';
@@ -3895,7 +4090,8 @@ function renderScore(){
   var bs=state.bullets, n=bs.length;
   var fit=0, withRec=0, numsum=0, verbs={}, t1=0, nverb=0;
   bs.forEach(function(b){
-    var lines=wrap(b.text);
+    /* measure with the same engine QC uses, so the two never disagree */
+    var lines=(typeof fitReport==='function')?fitReport(b.text).lines:wrap(b.text);
     var lf=lines.length?Math.round(textW(lines[lines.length-1]||"")/effWidthPt()*100):0;
     if(lines.length<=getMaxLines()&&b.text.trim()&&(lines.length<getMaxLines()||lf>=96))fit++;
     if(hasRecognition(b.text))withRec++;
@@ -3907,7 +4103,7 @@ function renderScore(){
   var avgNum=n?(numsum/n).toFixed(1):"0";
   var recPct=n?Math.round(withRec/n*100):0;
   var passiveN=0, overN=0;
-  bs.forEach(function(b){ if(/\b(?:was|were)\s+(?:responsible|tasked|utilized|used|involved|assigned|required|completed|performed|conducted|managed|charged|placed|given)\b/i.test(b.text)) passiveN++; if(wrap(b.text).length>getMaxLines()) overN++; });
+  bs.forEach(function(b){ if(/\b(?:was|were)\s+(?:responsible|tasked|utilized|used|involved|assigned|required|completed|performed|conducted|managed|charged|placed|given)\b/i.test(b.text)) passiveN++; if((typeof fitReport==='function')?fitReport(b.text).over:(wrap(b.text).length>getMaxLines())) overN++; });
   function k(b,s,c){return '<div class="kpi"><b style="color:'+(c||'var(--ink)')+'">'+b+'</b><span>'+s+'</span></div>';}
   $("score").innerHTML=
     k(fit+"/"+n,"fit 2-line", fit===n&&n?'var(--good)':'var(--warn)')+
@@ -3958,7 +4154,7 @@ function renderAll(){
     var _saved = _as.mode==="packed" ? (" \u00b7 auto-spaced, "+_as.n+" six-per-em gap"+(_as.n!=1?"s":"")+(_as.wide?", "+_as.wide+" widened back in the polish pass":""))
               : _as.mode==="over"   ? " \u00b7 spacing cannot save it"
               : "";
-    /* v9.32 per-line fit readout: leftover characters on every line. */
+    /* v9.33 per-line fit readout: leftover characters on every line. */
     var _fit=fitReport(b.text);
     var _leftTxt=_fit.rows.map(function(r,ri){ return "L"+(ri+1)+" "+r.ch+" ch"; }).join(" \u00b7 ");
     var _lastCh=_fit.rows.length? _fit.rows[_fit.rows.length-1].ch : 0;
@@ -4051,7 +4247,7 @@ function showThes(anchor,word,bid){
     fetch("https://api.datamuse.com/words?max=20&ml="+encodeURIComponent(word)).then(function(r){return r.json();}).catch(function(){return [];})
   ]).then(function(rs){ var seen={},merged=[]; (rs[0]||[]).concat(rs[1]||[]).forEach(function(o){ var k=(o.word||"").toLowerCase(); if(k&&k!==word.toLowerCase()&&!seen[k]){seen[k]=1;merged.push(o);} }); paintThes(word,merged); }).catch(function(){ paintThes(word,null); });
 }
-/* v9.30: the public thesaurus returns anatomical and vulgar senses for ordinary military words
+/* v9.33: the public thesaurus returns anatomical and vulgar senses for ordinary military words
    (member, unit, discharge, staff, service). Screen those out of the synonym popup. */
 var THES_BLOCK=("penis penises phallus phalluses phallic penile pecker prick cock cocks dick dicks willy weenie wiener schlong "+
  "genitalia genitals genital pudendum testicle testicles testis bollocks ballocks scrotum "+
@@ -4249,8 +4445,10 @@ function renderVocab(){
   h+='<div class="vsec"><h3>Scope Ladder</h3><div class="verbrow">'+
     VOCAB.scopeLadder.map(function(s,i){return '<span class="vchip t'+(i<2?3:i<4?2:1)+'">'+s+'</span>';}).join(" → ")+
     '<div class="lbl" style="margin-top:6px">Chain at least two tiers per statement. A sentence that stops at Sq rarely wins at Wing.</div></div>';
-  h+='<div class="vsec"><h3>Scoring Map · 85 pts</h3>'+
-    VOCAB.scoring.map(function(s){return '<div class="prin"><b>'+s.area+' — '+s.pts+' pts</b><p>'+s.focus+'</p></div>';}).join("")+'</div>';
+  var _sk=pkgType(), _sst=pkgStruct(_sk);
+  h+='<div class="vsec"><h3>Scoring Map · '+scoringTotal(_sk)+' pts</h3>'+
+    '<div class="lbl">These are the areas a <b>'+escHtml(_sst?_sst.label:_sk)+'</b> package is judged against. Change Package type in Settings to see another set.</div>'+
+    scoringFor(_sk).map(function(s){return '<div class="prin"><b>'+s.area+' — '+s.pts+' pts</b><p>'+s.focus+'</p></div>';}).join("")+'</div>';
   h+='<div class="vsec"><h3>Winner Principles</h3>'+
     VOCAB.principles.map(function(p){return '<div class="prin"><b>'+p.k+'</b><p>'+p.v+'</p></div>';}).join("")+'</div>';
   $("tab-vo").innerHTML=h;
@@ -4262,7 +4460,7 @@ function insertVerb(v){
   save(); renderAll();
 }
 function persistSettings(){ try{ state.settings={pW:$("pW").value,pPt:$("pPt").value,pLines:$("pLines").value,pCal:$("pCal").value,pWpt:$("pWpt").value,pkgType:$("pkgType")?$("pkgType").value:null}; }catch(e){} }
-function applySettings(){ try{ var s=state.settings; if(!s)return; if(s.pW!=null)$("pW").value=s.pW; if(s.pPt!=null)$("pPt").value=s.pPt; if(s.pLines!=null)$("pLines").value=s.pLines; if(s.pCal!=null)$("pCal").value=s.pCal; if(s.pWpt!=null&&$("pWpt"))$("pWpt").value=s.pWpt; if(s.pkgType&&$("pkgType"))$("pkgType").value=s.pkgType; }catch(e){} }
+function applySettings(){ try{ var s=state.settings; if(!s)return; if(s.pW!=null)$("pW").value=s.pW; if(s.pPt!=null)$("pPt").value=s.pPt; if(s.pLines!=null)$("pLines").value=s.pLines; if(s.pCal!=null)$("pCal").value=s.pCal; if(s.pWpt!=null&&$("pWpt"))$("pWpt").value=s.pWpt; if(s.pkgType&&$("pkgType")){ var _pk=pkgKey(s.pkgType); $("pkgType").value=(_pk==="auto"||PKG_STRUCTURE[_pk])?_pk:"auto"; } }catch(e){} }
 function growTA(ta){ if(!ta)return; ta.style.height="auto"; ta.style.height=(ta.scrollHeight+2)+"px"; }
 function growAll(){ try{document.querySelectorAll("textarea.bx").forEach(growTA);}catch(e){} }
 function dupBullet(id){ var idx=state.bullets.findIndex(function(b){return b.id==id;}); if(idx<0)return; state.bullets.splice(idx+1,0,{id:uid(),text:state.bullets[idx].text}); save(); renderAll(); flashToast("Statement duplicated."); }
@@ -5829,10 +6027,10 @@ function renderReference(){
 
 /* v5.6: coin ladder moved out of the Valuator right rail; it now lives with the grading rules in the Rules tab. */
 
-load(); applySettings(); renderAll(); initEx(); applyTheme((state.ui&&state.ui.theme)||"dark"); setMode((state.ui&&state.ui.mode)||'1206'); try{if(state.ui&&state.ui.tab)setTab(state.ui.tab);}catch(e){} growAll(); initUI(); updateSaveChip(); initShortcuts();
+load(); applySettings(); try{renderPkgCounts();}catch(e){} renderAll(); initEx(); applyTheme((state.ui&&state.ui.theme)||"dark"); setMode((state.ui&&state.ui.mode)||'1206'); try{if(state.ui&&state.ui.tab)setTab(state.ui.tab);}catch(e){} growAll(); initUI(); updateSaveChip(); initShortcuts();
 
 /* ============================================================================
-   v9.32 FEEDBACK CHANNEL  -- READ THIS BEFORE CHANGING ANYTHING HERE
+   v9.33 FEEDBACK CHANNEL  -- READ THIS BEFORE CHANGING ANYTHING HERE
    ----------------------------------------------------------------------------
    NETWORK POSTURE (this matters for the DHA / USAF security review)
      Bullet Forge is a single self-contained HTML file and makes no outbound
@@ -5905,8 +6103,17 @@ function _fbManual(body){
 }
 
 /* ===== Version tracker ===== */
-var APP_VERSION="9.32";
+var APP_VERSION="9.33";
 var CHANGELOG=[
+  {v:"9.33", d:"27 Sep 2026", notes:[
+     "Package type is now auto-detected from the content and the selector is an override, not the source of truth. Detection reads the full-caps section headings first (LEADERSHIP AND JOB PERFORMANCE, JOB PERFORMANCE IN PRIMARY DUTY with WHOLE AIRMAN CONCEPT, TEAM MEMBERS, OTHER SIGNIFICANT ACCOMPLISHMENTS or COMMUNITY EFFORTS, KEY ACCOMPLISHMENTS) and falls back to the statement count when no headings are present. Added an Auto option to the selector and made it the default.",
+     "Fixed the bug this came from: pasting a 10-statement AFMS annual package while the selector still read Individual quarterly reported \u201cneeds exactly 6 statements, you have 10\u201d, which read as \u201ctrim 4\u201d. When detection and the selector disagree, Bullet Forge now shows an informational notice with a one-click Use detected type button instead of a count error, and never tells you to add or trim statements over a type mismatch.",
+     "New bar above Package QC states the active type outright \u2014 Scoring as: AFMS annual (10 statements) \u2014 with the section shape and where the type came from, so a score is never shown without its basis.",
+     "Package-type catalogue completed: individual quarterly (military), AFMS annual, individual annual (military), team, volunteer, civilian and Key Spouse, with the section headings each one uses.",
+     "Every structure\u0027s section counts are now editable in Settings and persist, with a Reset to preset control per type, because local wing recognition instructions vary on counts. QC never hard-fails a count you set deliberately.",
+     "Scoring themes now vary by package type instead of applying the individual-military weighting to everything. AFMS annual drops Whole Airman and scores Primary Duty, Leadership, Innovation/Improvement, Scope & Partnership and Recognition; team scores Mission Impact, Process/Innovation, Scope & Partnership and Recognition; volunteer scores Volunteer Service, Community Impact, Scope & Partnership and Recognition; civilian and Key Spouse score their own two sections plus Scope and Recognition. Each of these sets totals 100. Quarterly and individual annual keep the five published areas unchanged. The scored areas are listed in the type bar and in the Vocabulary tab, labelled with the active type.",
+     "Known package headings are no longer swallowed into the first statement when a package is pasted without colons after the headings."
+  ]},
   {v:"9.32", d:"27 Sep 2026", notes:[
      "Line-fit engine rebuilt on measured form geometry. The DAF Form 1206 (20240313) SPECIFIC ACCOMPLISHMENTS field is 202.321 mm wide in Times New Roman 12pt; usable width measured against real Acrobat renders is 568.4 to 569.4pt, and Bullet Forge now builds and measures at 566.0pt for margin. The measurement width is editable in Settings. Character counts are never used to predict wrapping.",
      "U+2006 six-per-em is now measured as exactly 2.000pt at 12pt (it was 2.004pt), against exactly 3.000pt for a normal space, so one swap buys exactly 1.000pt.",
